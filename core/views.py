@@ -21,7 +21,7 @@ from core.decorators import (
     admin_required, viewer_or_admin_required, staff_or_admin_required,
     staff_permission_required, user_has_permission,
 )
-from core.forms import StudentForm, PaymentForm, PeriodDefaultFeeForm, StudentSearchForm, PurchaseForm
+from core.forms import StudentForm, PaymentForm, PeriodDefaultFeeForm, StudentSearchForm, PurchaseForm, SignupForm
 from django.contrib import messages
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.helpers import complete_social_login
@@ -95,7 +95,15 @@ def _paginate(request, queryset, per_page=None, page_param='page'):
 
 # Auth / misc
 def signup(request):
-    return render(request, 'core/signup.html')
+    if request.method == 'POST':
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            user = form.save(request)
+            login(request, user)
+            return redirect('dashboard')
+    else:
+        form = SignupForm()
+    return render(request, 'core/signup.html', {'form': form})
 
 
 def google_login(request):

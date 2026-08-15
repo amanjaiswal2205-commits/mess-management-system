@@ -1,5 +1,5 @@
 {% extends 'core/base.html' %}
-{% load socialaccount %}
+{% load static %}
 {% block title %}Sign Up | Mess Management{% endblock %}
 
 {% block content %}
@@ -8,15 +8,65 @@
     <div class="col-md-6">
       <div class="card shadow-sm">
         <div class="card-body p-5">
-          <h2 class="text-center mb-4">Create Account</h2>
-          <div class="d-grid gap-2 mb-3">
-            {% if google_enabled %}
-            <a href="{% url 'account_login' %}" class="btn btn-outline-secondary btn-sm">Already have an account? Login</a>
-            {% endif %}
-            <form method="post" action="{% url 'account_signup' %}">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-success w-100">Sign up with email/username</button>
-            </form>
+          <h2 class="text-center mb-4 fw-bold">Create Your Account</h2>
+          <p class="text-center text-muted mb-4">Join the Hostel Mess community</p>
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label class="form-label">{{ form.full_name.label }}{% if form.full_name.field.required %} *{% endif %}</label>
+              {{ form.full_name }}
+              {% if form.full_name.errors %}
+                <div class="invalid-feedback d-block text-danger small">{{ form.full_name.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">{{ form.username.label }}{% if form.username.field.required %} *{% endif %}</label>
+              {{ form.username }}
+              {% if form.username.errors %}
+                <div class="invalid-feedback d-block text-danger small">{{ form.username.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">{{ form.email.label }}{% if form.email.field.required %} *{% endif %}</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block text-danger small">{{ form.email.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">{{ form.password1.label }}{% if form.password1.field.required %} *{% endif %}</label>
+              {{ form.password1 }}
+              {% if form.password1.errors %}
+                <div class="invalid-feedback d-block text-danger small">{{ form.password1.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label">{{ form.password2.label }}{% if form.password2.field.required %} *{% endif %}</label>
+              {{ form.password2 }}
+              {% if form.password2.errors %}
+                <div class="invalid-feedback d-block text-danger small">{{ form.password2.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="d-grid">
+              <button type="submit" class="btn btn-success btn-lg">Create Account</button>
+            </div>
+          </form>
+
+          <div class="text-center mt-4">
+            <p class="small text-muted mb-0">
+              Already have an account? <a href="{% url 'account_login' %}">Login here</a>
+            </p>
           </div>
         </div>
       </div>
