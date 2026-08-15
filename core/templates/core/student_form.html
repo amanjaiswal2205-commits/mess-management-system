@@ -68,6 +68,15 @@
                   </label>
                 </div>
               </div>
+              {% else %}
+              <div class="col-md-6 mb-3">
+                <div class="form-check mt-2">
+                  {{ form.is_active }}
+                  <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                    Active
+                  </label>
+                </div>
+              </div>
               {% endif %}
             </div>
 

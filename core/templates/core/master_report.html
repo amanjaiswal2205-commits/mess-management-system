@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+{% block title %}Master Report | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="card">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Master Report</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted">This report provides an overview of all financial activities. Use the individual report pages for detailed views.</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'purchases_report' %}" class="btn btn-outline-primary">Purchase Report</a>
+            <a href="{% url 'payment_summary' %}" class="btn btn-outline-success">Payment Summary</a>
+            <a href="{% url 'settlement_list' %}" class="btn btn-outline-info">Settlements</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

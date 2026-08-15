@@ -121,10 +121,74 @@ def home(request):
 @login_required
 @viewer_or_admin_required
 def dashboard(request):
+    from django.db.models import Sum
+    from django.db.models.functions import TruncMonth
+    from collections import defaultdict
+    import json
+
     profile = getattr(request.user, 'profile', None)
+
+    total_fee = Payment.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+    total_expense = 0
+    total_expense += Purchase.objects.aggregate(total=Sum('amount'))['total'] or 0
+    total_expense += LabourPayment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0
+    total_expense += OtherExpense.objects.aggregate(total=Sum('amount'))['total'] or 0
+
+    surplus_deficit = total_fee - total_expense
+
+    fee_qs = Payment.objects.annotate(
+        month_trunc=TruncMonth('month')
+    ).values('month_trunc').annotate(total=Sum('amount')).order_by('month_trunc')
+
+    purchase_expense = Purchase.objects.annotate(
+        month_trunc=TruncMonth('bill_date')
+    ).values('month_trunc').annotate(total=Sum('amount'))
+
+    labour_expense = LabourPayment.objects.filter(status='PAID').annotate(
+        month_trunc=TruncMonth('month')
+    ).values('month_trunc').annotate(total=Sum('amount'))
+
+    other_expense = OtherExpense.objects.annotate(
+        month_trunc=TruncMonth('month')
+    ).values('month_trunc').annotate(total=Sum('amount'))
+
+    all_months = set()
+    for entry in fee_qs:
+        all_months.add(entry['month_trunc'])
+    for entry in purchase_expense:
+        all_months.add(entry['month_trunc'])
+    for entry in labour_expense:
+        all_months.add(entry['month_trunc'])
+    for entry in other_expense:
+        all_months.add(entry['month_trunc'])
+
+    fee_lookup = {entry['month_trunc']: float(entry['total'] or 0) for entry in fee_qs}
+    expense_lookup = defaultdict(float)
+    for entry in purchase_expense:
+        expense_lookup[entry['month_trunc']] += float(entry['total'] or 0)
+    for entry in labour_expense:
+        expense_lookup[entry['month_trunc']] += float(entry['total'] or 0)
+    for entry in other_expense:
+        expense_lookup[entry['month_trunc']] += float(entry['total'] or 0)
+
+    sorted_months = sorted(all_months)
+    months = [m.strftime('%b %Y') for m in sorted_months]
+    fees = [fee_lookup.get(m, 0) for m in sorted_months]
+    expenses = [expense_lookup.get(m, 0) for m in sorted_months]
+
+    recent_purchases = Purchase.objects.select_related('supplier', 'item').all().order_by('-bill_date')[:5]
+
     context = {
         'user': request.user,
         'profile': profile,
+        'total_fee': total_fee,
+        'total_expense': total_expense,
+        'surplus_deficit': surplus_deficit,
+        'months': json.dumps(months),
+        'fees': json.dumps(fees),
+        'expenses': json.dumps(expenses),
+        'recent_purchases': recent_purchases,
     }
     return render(request, 'core/dashboard.html', context)
 
@@ -165,12 +229,15 @@ def student_add(request):
     if request.method == 'POST':
         form = StudentForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Student added.')
-            return redirect('student_list')
+            try:
+                form.save()
+                messages.success(request, 'Student added.')
+                return redirect('student_list')
+            except Exception as e:
+                messages.error(request, f'Could not save student: {e}')
     else:
         form = StudentForm()
-    return render(request, 'core/student_add.html', {'form': form})
+    return render(request, 'core/student_form.html', {'form': form})
 
 
 @login_required
@@ -178,14 +245,14 @@ def student_add(request):
 def student_edit(request, pk):
     student = get_object_or_404(Student, pk=pk)
     if request.method == 'POST':
-        form = StudentForm(request.POST, instance=student)
+        form = StudentForm(request.POST, instance=student, user_instance=student.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Student updated.')
             return redirect('student_list')
     else:
-        form = StudentForm(instance=student)
-    return render(request, 'core/student_add.html', {'form': form})
+        form = StudentForm(instance=student, user_instance=student.user)
+    return render(request, 'core/student_form.html', {'form': form, 'student': student})
 
 
 @login_required
@@ -201,7 +268,14 @@ def student_toggle_active(request, pk):
 @admin_required
 def mess_setting(request):
     setting = MessSetting.objects.first()
-    return render(request, 'core/mess_setting.html', {'setting': setting})
+    form = MessSettingForm(instance=setting)
+    if request.method == 'POST':
+        form = MessSettingForm(request.POST, instance=setting)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Mess settings updated.')
+            return redirect('student_list')
+    return render(request, 'core/mess_setting_form.html', {'form': form, 'setting': setting})
 
 
 # Period Default Fee
@@ -252,7 +326,43 @@ def payments_export_excel(request):
 @login_required
 @viewer_or_admin_required
 def payment_summary(request):
-    return render(request, 'core/payment_summary.html', {})
+    from django.db.models import Sum, F, DecimalField
+    from django.db.models.functions import Coalesce
+
+    period_form = PeriodFilterForm(request.GET)
+    selected_period = None
+    summary = []
+
+    if period_form.is_valid():
+        selected_period = period_form.cleaned_data.get('period')
+
+    if selected_period:
+        accounts = StudentPeriodAccount.objects.filter(period=selected_period).select_related('student__user')
+        for account in accounts:
+            total_paid = Payment.objects.filter(
+                student=account.student, period=selected_period, status='PAID'
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            total_paid = float(total_paid) if total_paid else 0
+            remaining = account.get_display_remaining()
+            remaining = float(remaining) if str(remaining).replace('-', '').replace('.', '').isdigit() else 0
+            is_pending = total_paid < float(account.total_to_collect or 0)
+            status_class = 'bg-success' if not is_pending else 'bg-warning text-dark'
+            status_text = 'Paid' if not is_pending else 'Due'
+            summary.append({
+                'student': account.student,
+                'total_to_collect': account.total_to_collect,
+                'total_paid': total_paid,
+                'display_remaining': remaining,
+                'remaining_type': account.get_remaining_type(),
+                'status_class': status_class,
+                'status': status_text,
+            })
+
+    return render(request, 'core/payment_summary.html', {
+        'period_form': period_form,
+        'selected_period': selected_period,
+        'summary': summary,
+    })
 
 
 @login_required
@@ -261,12 +371,15 @@ def payment_add(request):
     if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Payment recorded.')
-            return redirect('payments_list')
+            try:
+                form.save()
+                messages.success(request, 'Payment recorded.')
+                return redirect('payments_list')
+            except Exception as e:
+                messages.error(request, f'Could not save payment: {e}')
     else:
         form = PaymentForm()
-    return render(request, 'core/payment_add.html', {'form': form})
+    return render(request, 'core/payment_form.html', {'form': form})
 
 
 @login_required
@@ -279,7 +392,12 @@ def payments_summary_export_excel(request):
 @staff_permission_required('can_manage_payments')
 def payment_due_edit(request, student_id, period_id):
     account = get_object_or_404(StudentPeriodAccount, student_id=student_id, period_id=period_id)
-    return render(request, 'core/payment_due_edit.html', {'account': account})
+    form = StudentPeriodAccountForm(request.POST or None, instance=account)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Monthly fee updated.')
+        return redirect('payment_summary')
+    return render(request, 'core/payment_due_form.html', {'form': form, 'account': account, 'student': account.student, 'period': account.period})
 
 
 @login_required
@@ -320,9 +438,12 @@ def purchase_add(request):
     if request.method == 'POST':
         form = PurchaseForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Purchase recorded.')
-            return redirect('purchases_list')
+            try:
+                form.save()
+                messages.success(request, 'Purchase recorded.')
+                return redirect('purchases_list')
+            except Exception as e:
+                messages.error(request, f'Could not save purchase: {e}')
     else:
         form = PurchaseForm()
     return render(request, 'core/purchase_form.html', {'form': form})

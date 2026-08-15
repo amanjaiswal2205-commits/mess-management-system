@@ -76,23 +76,27 @@ class StudentForm(forms.ModelForm):
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
                 raise forms.ValidationError("A student with this Hostel ID already exists.")
+            if User.objects.filter(username=hostel_id).exists():
+                raise forms.ValidationError("This Hostel ID is already taken. Please choose a different one.")
         return hostel_id
 
     def save(self, commit=True):
         student = super().save(commit=False)
         if self.user_instance:
             user = self.user_instance
+            user.first_name = self.cleaned_data['first_name']
+            user.last_name = self.cleaned_data['last_name']
         else:
             user = User()
+            user.first_name = self.cleaned_data['first_name']
+            user.last_name = self.cleaned_data['last_name']
             student.is_active = True
-
-        user.first_name = self.cleaned_data['first_name']
-        user.last_name = self.cleaned_data['last_name']
 
         if student.hostel_id:
             user.username = student.hostel_id
         else:
-            user.username = f"student_{User.objects.count() + 1}"
+            base_username = f"student_{User.objects.count() + 1}"
+            user.username = base_username
 
         if commit:
             user.save()
