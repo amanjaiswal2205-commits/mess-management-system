@@ -1,0 +1,96 @@
+﻿{% extends 'core/base.html' %}
+{% block title %}Expenses | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Expenses</h4>
+    {% if user.profile.role == 'admin' %}
+    <a href="{% url 'expenses_export_excel' %}" class="btn btn-outline-primary btn-sm shadow-sm">Export to Excel</a>
+    {% endif %}
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Labour Payments</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Labour</th>
+                  <th>Month</th>
+                  <th class="text-end">Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for l in labour_expenses %}
+                <tr>
+                  <td>{{ l.labour.name }}</td>
+                  <td>{{ l.month|date:"M Y" }}</td>
+                  <td class="text-end">₹ {{ l.amount }}</td>
+                  <td>
+                    {% if l.status == "PAID" %}
+                      <span class="badge bg-success">PAID</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark">PENDING</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted empty-state">No labour payments.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% with page_obj=labour_page_obj paginator=labour_paginator is_paginated=labour_is_paginated query_string=labour_query_string page_range_list=labour_page_range page_param='labour_page' %}
+          {% include 'core/_pagination.html' %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Other Expenses</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Month</th>
+                  <th class="text-end">Amount</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in other_expenses %}
+                <tr>
+                  <td>{{ e.category }}</td>
+                  <td>{{ e.month|date:"M Y" }}</td>
+                  <td class="text-end">₹ {{ e.amount }}</td>
+                  <td>{{ e.note }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-center text-muted empty-state">No other expenses.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% with page_obj=other_page_obj paginator=other_paginator is_paginated=other_is_paginated query_string=other_query_string page_range_list=other_page_range page_param='other_page' %}
+          {% include 'core/_pagination.html' %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+

@@ -1,0 +1,141 @@
+﻿{% extends 'core/base.html' %}
+{% block title %}Settlements | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Settlements</h4>
+    {% if user.profile.role == 'admin' %}
+    <a href="{% url 'settlements_export_excel' %}" class="btn btn-outline-primary btn-sm shadow-sm">Export to Excel</a>
+    {% endif %}
+  </div>
+
+  {% if user.profile.role == 'admin' or user.profile.can_manage_settlements %}
+  <!-- Primary admin flow: select an Accounting Period and view its settlement -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h6 class="card-title mb-0">Select Accounting Period</h6>
+      <p class="text-muted small mb-3">Choose an accounting period to open its period settlement.</p>
+      <form id="periodSettlementForm">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-7">
+            <select id="period_id" class="form-select" required>
+              <option value="">Select Accounting Period</option>
+              {% for p in periods %}
+              <option value="{{ p.pk }}">{{ p.name }} ({{ p.start_date }} – {{ p.end_date }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-5">
+            <button type="submit" class="btn btn-primary w-100">View Settlement</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Legacy month-based generation (kept for backward compatibility; not the primary flow) -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h6 class="card-title mb-0">Legacy Monthly Settlement</h6>
+      <p class="text-muted small mb-3">Older month-based settlement generation. Use the Accounting Period flow above for current accounting.</p>
+      <form id="settlementForm">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-3">
+            <input type="number" id="year" class="form-control" placeholder="Year (e.g. 2025)" required>
+          </div>
+          <div class="col-md-3">
+            <input type="number" id="month" class="form-control" placeholder="Month (1-12)" min="1" max="12" required>
+          </div>
+          <div class="col-md-3">
+            <input type="number" id="closed_days" class="form-control" placeholder="Closed Days" value="0" min="0">
+          </div>
+          <div class="col-md-3">
+            <button type="submit" class="btn btn-outline-secondary w-100">Generate Monthly (Legacy)</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Settlement History</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th class="text-end">Total Collection</th>
+              <th class="text-end">Total Expense</th>
+              <th class="text-end">Surplus/Deficit</th>
+              <th class="text-end">Per Student</th>
+              <th>Status</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in settlements %}
+            <tr>
+              <td>
+                {% if s.accounting_period %}
+                  {{ s.accounting_period.name }}
+                {% else %}
+                  {{ s.month|date:"F Y" }}
+                {% endif %}
+              </td>
+              <td class="text-end">₹ {{ s.total_fee }}</td>
+              <td class="text-end">₹ {{ s.total_expense }}</td>
+              <td class="text-end {% if s.surplus_deficit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                ₹ {{ s.surplus_deficit }}
+              </td>
+              <td class="text-end">₹ {{ s.per_student_adjustment }}</td>
+              <td>
+                {% if s.finalized %}
+                  <span class="badge bg-success">Finalized</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Draft</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if s.accounting_period %}
+                  <a href="{% url 'period_settlement' s.accounting_period.pk %}" class="btn btn-outline-primary btn-sm">View Settlement</a>
+                {% else %}
+                  <a href="#" class="btn btn-outline-secondary btn-sm" title="Legacy settlement (no accounting period)">View</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" class="text-center text-muted empty-state">No settlements found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% include 'core/_pagination.html' %}
+</main>
+{% endblock %}
+{% block extra_js %}
+<script>
+  document.getElementById('periodSettlementForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const periodId = document.getElementById('period_id').value;
+    if (!periodId) return;
+    window.location.href = `/settlement/period/${periodId}/`;
+  });
+
+  document.getElementById('settlementForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const year = document.getElementById('year').value;
+    const month = document.getElementById('month').value;
+    const closed = document.getElementById('closed_days').value || 0;
+
+    if (!year || !month) return;
+    window.location.href = `/settlement/${year}/${month}/${closed}/`;
+  });
+</script>
+{% endblock %}

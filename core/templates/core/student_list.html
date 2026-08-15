@@ -1,0 +1,90 @@
+{% extends 'core/base.html' %}
+{% block title %}Students | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Student Management</h4>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      {% if user.profile.role == 'admin' %}
+      <a href="{% url 'mess_setting' %}" class="btn btn-outline-primary btn-sm">⚙️ Set Total Students</a>
+      {% endif %}
+      {% if user.profile.role == 'admin' or user.profile.can_manage_students %}
+      <a href="{% url 'student_add' %}" class="btn btn-success btn-sm">Add Student</a>
+      {% endif %}
+      {% if user.profile.role == 'admin' %}
+      <a href="{% url 'students_export_excel' %}" class="btn btn-outline-primary btn-sm">Export to Excel</a>
+      {% endif %}
+      <span class="text-muted align-self-center">
+        Total: {{ total_students }} | Named: {{ named_students }} | Unnamed: {{ unnamed_students }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-sm-8">
+          {{ search_form.query.label_tag }}
+          {{ search_form.query }}
+        </div>
+        <div class="col-sm-4">
+          <button type="submit" class="btn btn-success w-100">Search</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Students</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Hostel ID</th>
+              <th>Name</th>
+              <th>Room</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in students %}
+            <tr>
+              <td><strong>{{ s.hostel_id }}</strong></td>
+              <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+              <td>{{ s.room_no|default:"—" }}</td>
+              <td>{{ s.phone|default:"—" }}</td>
+              <td>
+                {% if s.is_active %}
+                  <span class="badge bg-success">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user.profile.role == 'admin' or user.profile.can_manage_students %}
+                <a href="{% url 'student_edit' pk=s.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                <a href="{% url 'student_toggle_active' pk=s.pk %}" class="btn btn-sm btn-outline-warning">
+                  {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted empty-state">No students found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% include 'core/_pagination.html' %}
+</main>
+{% endblock %}

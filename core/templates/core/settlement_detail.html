@@ -1,0 +1,99 @@
+﻿{% extends 'core/base.html' %}
+{% block title %}
+  {% if is_period_settlement %}Period Settlement{% else %}Monthly Settlement{% endif %} | Mess Management
+{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">
+      {% if is_period_settlement %}Period Settlement{% else %}Monthly Settlement{% endif %}
+    </h4>
+    <a href="{% url 'settlement_list' %}" class="btn btn-sm btn-outline-light">← Back to List</a>
+  </div>
+
+  {% if settlement.accounting_period %}
+  <div class="alert alert-info mb-3">
+    Accounting Period: <strong>{{ settlement.accounting_period.name }}</strong>
+    ({{ settlement.accounting_period.start_date }} – {{ settlement.accounting_period.end_date }})
+  </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">
+        {% if settlement.accounting_period %}
+          Settlement for {{ settlement.accounting_period.name }}
+        {% else %}
+          Settlement for {{ settlement.month|date:"F Y" }}
+        {% endif %}
+      </h5>
+    </div>
+    <div class="card-body">
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Opening Balance
+            <span class="text-muted d-block small">Previous period's carried forward closing balance</span>
+          </span>
+          <strong>₹ {{ settlement.opening_balance|default:"0" }}</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Current Period Collection
+            <span class="text-muted d-block small">Only PAID payments from this Accounting Period</span>
+          </span>
+          <strong>₹ {{ settlement.total_fee }}</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Total Available
+            <span class="text-muted d-block small">Opening Balance + Current Period Collection</span>
+          </span>
+          <strong>₹ {{ settlement.opening_balance|add:settlement.total_fee|default:"0" }}</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Current Period Expense
+            <span class="text-muted d-block small">Expenses/Purchases/Labour linked to this Accounting Period</span>
+          </span>
+          <strong>₹ {{ settlement.total_expense }}</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Closing Balance
+            <span class="text-muted d-block small">Total Available - Current Period Expense</span>
+          </span>
+          <strong class="{% if settlement.closing_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+            ₹ {{ settlement.closing_balance|default:"0" }}
+          </strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Surplus / Deficit</span>
+          <strong class="{% if settlement.surplus_deficit >= 0 %}text-success{% else %}text-danger{% endif %}">
+            ₹ {{ settlement.surplus_deficit }}
+          </strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Per Student Adjustment</span>
+          <strong>₹ {{ settlement.per_student_adjustment }}</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Status</span>
+          {% if settlement.finalized %}
+            <span class="badge bg-success">Finalized</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Draft</span>
+          {% endif %}
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Mess Days Adjustment</h5>
+    </div>
+    <div class="card-body">
+      <p class="mb-1">Total Days in Month: <strong>{{ days_in_month }}</strong></p>
+      <p class="mb-1">Closed Days: <strong>{{ closed_days }}</strong></p>
+      <p class="mb-0">Effective Days Considered: <strong>{{ effective_days }}</strong></p>
+    </div>
+  </div>
+</main>
+{% endblock %}

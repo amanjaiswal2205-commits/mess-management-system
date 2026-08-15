@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% block title %}Payment History | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Payment History</h4>
+    <a href="{% url 'payment_summary' %}" class="btn btn-outline-secondary btn-sm">← Back to Summary</a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">
+        {{ student.user.get_full_name|default:student.user.username }} ({{ student.hostel_id }}) — {{ period.name }}
+      </h5>
+      <div class="row mt-3">
+        <div class="col-md-4">
+          <p class="mb-1 text-muted">Total to Collect</p>
+          <h5 class="text-primary">₹ {{ total_to_collect }}</h5>
+        </div>
+        <div class="col-md-4">
+          <p class="mb-1 text-muted">Total Paid</p>
+          <h5 class="text-success">₹ {{ total_paid }}</h5>
+        </div>
+        <div class="col-md-4">
+          <p class="mb-1 text-muted">Remaining</p>
+          <h5 class="text-danger">₹ {{ display_remaining }}</h5>
+          {% if remaining_type == "Manual" %}
+            <span class="badge bg-warning text-dark">Manual</span>
+          {% else %}
+            <span class="badge bg-info">Auto</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Payment Transactions</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th class="text-end">Amount</th>
+              <th>Mode</th>
+              <th>Reference ID</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td>{{ p.created_at|date:"d-m-Y h:i A" }}</td>
+              <td class="text-end">₹ {{ p.amount }}</td>
+              <td>{{ p.method }}</td>
+              <td>{{ p.txn_id|default:"—" }}</td>
+              <td>
+                {% if p.status == "PAID" %}
+                  <span class="badge bg-success">PAID</span>
+                {% elif p.status == "PENDING" %}
+                  <span class="badge bg-warning text-dark">PENDING</span>
+                {% else %}
+                  <span class="badge bg-danger">FAILED</span>
+                {% endif %}
+              </td>
+              <td>{{ p.adjustment_amount|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted empty-state">No payments recorded for this period.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

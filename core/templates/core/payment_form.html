@@ -1,0 +1,177 @@
+{% extends 'core/base.html' %}
+{% block title %}Add Payment | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+      <div class="card-header bg-white border-0 py-3">
+        <h5 class="card-title mb-0">Add Payment</h5>
+      </div>
+      <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                  <p class="mb-0">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="row g-3">
+              <div class="col-md-6 mb-3" style="position: relative;">
+                <label for="student-search" class="form-label">Student *</label>
+                <input type="text" id="student-search" class="form-control" placeholder="Search by name, ID, or room..." autocomplete="off">
+                <input type="hidden" name="student" id="student-id" value="{{ form.student.value|default:'' }}">
+                <div id="student-results" class="list-group mt-1" style="display:none; position:absolute; z-index:1000; max-height:200px; overflow-y:auto; width:100%; background:#fff; border:1px solid #d1d5db; border-radius:0.5rem;"></div>
+                {% if form.student.errors %}
+                  <div class="text-danger small">{{ form.student.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.period.id_for_label }}" class="form-label">Accounting Period *</label>
+                {{ form.period }}
+                {% if form.period.errors %}
+                  <div class="text-danger small">{{ form.period.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.amount.id_for_label }}" class="form-label">Payment Amount (₹) *</label>
+                {{ form.amount }}
+                {% if form.amount.errors %}
+                  <div class="text-danger small">{{ form.amount.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.month.id_for_label }}" class="form-label">Payment Date *</label>
+                {{ form.month }}
+                {% if form.month.errors %}
+                  <div class="text-danger small">{{ form.month.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.method.id_for_label }}" class="form-label">Payment Mode *</label>
+                {{ form.method }}
+                {% if form.method.errors %}
+                  <div class="text-danger small">{{ form.method.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="{{ form.txn_id.id_for_label }}" class="form-label">Transaction / Reference ID</label>
+                {{ form.txn_id }}
+                {% if form.txn_id.errors %}
+                  <div class="text-danger small">{{ form.txn_id.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-12">
+                <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                {{ form.status }}
+              </div>
+            </div>
+
+            <div class="mt-4 d-flex justify-content-between">
+              <a href="{% url 'payment_summary' %}" class="btn btn-outline-secondary">Cancel</a>
+              <button type="submit" class="btn btn-success">Save Payment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const searchInput = document.getElementById('student-search');
+  const hiddenInput = document.getElementById('student-id');
+  const resultsDiv = document.getElementById('student-results');
+  let debounceTimer;
+
+  if (!searchInput || !hiddenInput || !resultsDiv) return;
+
+  function hideResults() {
+    resultsDiv.style.display = 'none';
+    resultsDiv.innerHTML = '';
+  }
+
+  async function fetchStudents(query) {
+    const resp = await fetch("{% url 'student_search_api' %}?q=" + encodeURIComponent(query));
+    const data = await resp.json();
+    return data.results || [];
+  }
+
+  async function selectStudent(id, text) {
+    hiddenInput.value = id;
+    searchInput.value = text;
+    hideResults();
+  }
+
+  async function loadInitialStudent() {
+    const id = hiddenInput.value;
+    if (!id) return;
+    try {
+      const students = await fetchStudents('');
+      const student = students.find(s => String(s.id) === String(id));
+      if (student) {
+        searchInput.value = student.text;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    const query = this.value.trim();
+    if (!query) {
+      hiddenInput.value = '';
+      hideResults();
+      return;
+    }
+    debounceTimer = setTimeout(async () => {
+      const students = await fetchStudents(query);
+      resultsDiv.innerHTML = '';
+      if (students.length === 0) {
+        resultsDiv.style.display = 'none';
+        return;
+      }
+      students.forEach(s => {
+        const item = document.createElement('a');
+        item.href = '#';
+        item.className = 'list-group-item list-group-item-action';
+        item.textContent = s.text;
+        item.addEventListener('click', (e) => {
+          e.preventDefault();
+          selectStudent(s.id, s.text);
+        });
+        resultsDiv.appendChild(item);
+      });
+      resultsDiv.style.display = 'block';
+    }, 200);
+  });
+
+  searchInput.addEventListener('blur', function() {
+    setTimeout(hideResults, 150);
+  });
+
+  searchInput.addEventListener('focus', function() {
+    if (this.value.trim()) {
+      this.dispatchEvent(new Event('input'));
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+      hideResults();
+    }
+  });
+
+  loadInitialStudent();
+})();
+</script>
+{% endblock %}

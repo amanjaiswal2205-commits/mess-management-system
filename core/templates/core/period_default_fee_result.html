@@ -1,0 +1,36 @@
+{% extends 'core/base.html' %}
+{% block title %}Apply Result | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Apply Complete</h5>
+        </div>
+        <div class="card-body">
+
+          <div class="alert alert-success">
+            <p class="mb-1"><strong>Period:</strong> {{ period.name }}</p>
+            <p class="mb-1"><strong>Mode:</strong> {% if mode == 'all' %}All Active Students{% else %}Unset Students Only{% endif %}</p>
+            <p class="mb-1"><strong>Default Fee Applied:</strong> ₹{{ default_fee }}</p>
+            <p class="mb-0"><strong>Students Affected:</strong> {{ affected_count }}</p>
+          </div>
+
+          {% if skipped_count > 0 %}
+          <div class="alert alert-info">
+            <strong>{{ skipped_count }}</strong> students were skipped because they already had an existing amount set.
+          </div>
+          {% endif %}
+
+          <div class="d-flex justify-content-between mt-4">
+            <a href="{% url 'period_default_fee_set' %}?period={{ period.pk }}" class="btn btn-outline-secondary">Back to Default Fee</a>
+            <a href="{% url 'payment_summary' %}?period={{ period.pk }}" class="btn btn-success">View Payment Summary</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

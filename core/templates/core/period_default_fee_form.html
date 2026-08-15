@@ -1,0 +1,99 @@
+{% extends 'core/base.html' %}
+{% block title %}Default Monthly Fee | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card mb-4">
+        <div class="card-header bg-white border-0 py-3">
+          <h5 class="card-title mb-0">Default Monthly Fee</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-muted mb-4">
+            Set a default fee per active student for an accounting period. You can then apply it to students automatically.
+          </p>
+
+          <form method="get" class="row g-3 align-items-end mb-4">
+            <div class="col-md-8">
+              <label for="{{ form.period.id_for_label }}" class="form-label">Select Accounting Period</label>
+              {{ form.period }}
+            </div>
+            <div class="col-md-4">
+              <button type="submit" class="btn btn-outline-primary w-100">Load / Set Default Fee</button>
+            </div>
+          </form>
+
+          {% if selected_period %}
+          <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                  <p class="mb-0">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="mb-3">
+              {% include "core/_form_fields.html" with field=form.default_fee_per_student wrapper_class="" %}
+            </div>
+
+            <button type="submit" class="btn btn-success">Save Default Fee</button>
+          </form>
+          {% endif %}
+
+          {% if default_fee %}
+          <div class="mt-4 p-3 bg-light rounded">
+            <h6 class="mb-2">Current Default Fee for {{ selected_period.name }}</h6>
+            <p class="mb-1"><strong>Default Fee Per Student:</strong> ₹{{ default_fee.default_fee_per_student }}</p>
+            <p class="mb-1"><strong>Last Updated:</strong> {{ default_fee.updated_at|date:"d M Y, H:i" }}</p>
+          </div>
+          {% endif %}
+
+          {% if selected_period %}
+          <div class="mt-4">
+            <h6 class="mb-3">Period Statistics</h6>
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="card h-100">
+                  <div class="card-body text-center">
+                    <div class="display-6 fw-bold text-primary">{{ active_student_count }}</div>
+                    <div class="text-muted small">Students with Accounts</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card h-100">
+                  <div class="card-body text-center">
+                    <div class="display-6 fw-bold text-success">₹ {{ expected_collection|floatformat:2 }}</div>
+                    <div class="text-muted small">Expected Collection</div>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="card h-100">
+                  <div class="card-body text-center">
+                    <div class="display-6 fw-bold text-info">{{ default_fee.default_fee_per_student|default:"Not set" }}</div>
+                    <div class="text-muted small">Default Fee Per Student</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {% if default_fee %}
+            <div class="mt-4 d-flex gap-2 flex-wrap">
+              <a href="{% url 'period_default_fee_apply_unset' period_id=selected_period.pk %}" class="btn btn-outline-primary">Apply to Unset Students Only</a>
+              <a href="{% url 'period_default_fee_apply_all' period_id=selected_period.pk %}" class="btn btn-outline-danger">Apply to All Active Students</a>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+

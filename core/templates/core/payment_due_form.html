@@ -1,0 +1,116 @@
+{% extends 'core/base.html' %}
+{% block title %}Set Due Amount | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+      <div class="card-header bg-white border-0 py-3">
+        <h5 class="card-title mb-0">Edit Student Monthly Fee</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-4">
+          <strong>{{ student.user.get_full_name|default:student.user.username }}</strong> ({{ student.hostel_id|default:"—" }}) — {{ period.name }}
+        </p>
+
+        <div class="alert alert-info mb-4">
+          <div class="row g-3 text-center">
+            <div class="col-md-4">
+              <div class="text-muted small">Monthly Fee</div>
+              <div class="fw-bold">₹ {{ account.total_to_collect }}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Total Paid</div>
+              <div class="fw-bold">₹ {{ account.get_total_paid }}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Remaining Due</div>
+              <div class="fw-bold">₹ {{ account.get_display_remaining }}</div>
+              {% if account.get_remaining_type == "Manual" %}
+                <span class="badge bg-warning text-dark">Manual</span>
+              {% else %}
+                <span class="badge bg-info">Auto</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {% for error in form.non_field_errors %}
+                <p class="mb-0">{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label for="{{ form.total_to_collect.id_for_label }}" class="form-label">{{ form.total_to_collect.label }}</label>
+            {{ form.total_to_collect }}
+            {% if form.total_to_collect.errors %}
+              <div class="text-danger small">{{ form.total_to_collect.errors|striptags }}</div>
+            {% endif %}
+            <div class="form-text">This is the total monthly fee for this student for this period.</div>
+          </div>
+
+          <div class="mb-3 form-check">
+            {{ form.is_manual_remaining }}
+            <label class="form-check-label" for="{{ form.is_manual_remaining.id_for_label }}">
+              {{ form.is_manual_remaining.label }}
+            </label>
+            <div class="form-text">{{ form.is_manual_remaining.help_text }}</div>
+          </div>
+
+          <div class="mb-3" id="manual-remaining-section" style="display: none;">
+            <label for="{{ form.manual_remaining.id_for_label }}" class="form-label">{{ form.manual_remaining.label }}</label>
+            {{ form.manual_remaining }}
+            {% if form.manual_remaining.errors %}
+              <div class="text-danger small">{{ form.manual_remaining.errors|striptags }}</div>
+            {% endif %}
+            <div class="form-text">When set, this amount will be shown as the remaining due instead of the auto-calculated amount.</div>
+          </div>
+
+          <div class="d-flex justify-content-between">
+            <a href="{% url 'payment_summary' %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success">Save Monthly Fee</button>
+          </div>
+        </form>
+
+        {% if account.pk %}
+        <div class="mt-4 p-3 bg-light rounded">
+          <h6 class="mb-2">Current Status</h6>
+          <p class="mb-1"><strong>Monthly Fee:</strong> ₹{{ account.total_to_collect }}</p>
+          <p class="mb-1"><strong>Remaining Type:</strong> {{ account.get_remaining_type }}</p>
+          {% if account.is_manual_remaining %}
+          <p class="mb-1"><strong>Manual Remaining:</strong> ₹{{ account.manual_remaining }}</p>
+          {% endif %}
+          <p class="mb-1"><strong>Last Updated:</strong> {{ account.updated_at|date:"d M Y, H:i" }}</p>
+        </div>
+        {% endif %}
+      </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const manualRemainingCheckbox = document.getElementById('{{ form.is_manual_remaining.id_for_label }}');
+  const manualRemainingSection = document.getElementById('manual-remaining-section');
+
+  function toggleManualRemaining() {
+    if (manualRemainingCheckbox && manualRemainingSection) {
+      manualRemainingSection.style.display = manualRemainingCheckbox.checked ? 'block' : 'none';
+    }
+  }
+
+  if (manualRemainingCheckbox) {
+    manualRemainingCheckbox.addEventListener('change', toggleManualRemaining);
+    toggleManualRemaining();
+  }
+</script>
+{% endblock %}

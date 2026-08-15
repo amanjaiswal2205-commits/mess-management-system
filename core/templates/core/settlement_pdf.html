@@ -1,0 +1,35 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Settlement Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 14px; }
+    h2 { text-align: center; color: #198754; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: right; }
+    th { background: #f0f0f0; }
+    td:first-child, th:first-child { text-align: left; }
+    .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
+  </style>
+</head>
+<body>
+  <h2>Hostel Mess Settlement Report</h2>
+  <p><strong>Month:</strong> {{ settlement.month|date:"F Y" }}</p>
+  <p><strong>Total Days:</strong> {{ days_in_month }} |
+     <strong>Closed Days:</strong> {{ closed_days }} |
+     <strong>Effective Days:</strong> {{ effective_days }}</p>
+
+  <table>
+    <tr><th>Total Fee Collected</th><td>₹ {{ settlement.total_fee }}</td></tr>
+    <tr><th>Total Expense</th><td>₹ {{ settlement.total_expense }}</td></tr>
+    <tr><th>Surplus / Deficit</th><td>₹ {{ settlement.surplus_deficit }}</td></tr>
+    <tr><th>Per Student Adjustment</th><td>₹ {{ settlement.per_student_adjustment }}</td></tr>
+    <tr><th>Status</th><td>{{ settlement.finalized|yesno:"Finalized,Draft" }}</td></tr>
+  </table>
+
+  <div class="footer">
+    Generated on {{ now|date:"d M Y, H:i" }}
+  </div>
+</body>
+</html>

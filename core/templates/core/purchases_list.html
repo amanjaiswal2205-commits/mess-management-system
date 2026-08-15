@@ -1,0 +1,64 @@
+﻿{% extends 'core/base.html' %}
+{% block title %}Purchases | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5 fade-in-up">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Purchases</h4>
+    {% if user.profile.role == 'admin' or user.profile.can_manage_purchases %}
+    <a href="{% url 'purchase_add' %}" class="btn btn-success btn-sm shadow-sm">Add Purchase</a>
+    {% endif %}
+    {% if user.profile.role == 'admin' %}
+    <a href="{% url 'purchases_export_excel' %}" class="btn btn-outline-primary btn-sm shadow-sm">Export to Excel</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">All Purchases</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th>Bill No</th>
+              <th>Date</th>
+              <th>Item</th>
+              <th class="text-end">Qty</th>
+              <th class="text-start">Unit</th>
+              <th class="text-end">Rate</th>
+              <th class="text-end">Amount</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in purchases %}
+            <tr>
+              <td><span class="badge badge-soft">{{ p.supplier.name|default:"N/A" }}</span></td>
+              <td>{{ p.bill_no }}</td>
+              <td>{{ p.bill_date|date:"d M Y" }}</td>
+              <td>{{ p.item.name }}</td>
+              <td class="text-end">{{ p.qty }}</td>
+              <td class="text-start">{{ p.unit|default:"—" }}</td>
+              <td class="text-end">₹ {{ p.rate }}</td>
+              <td class="text-end">₹ {{ p.amount }}</td>
+              <td class="text-center">
+                {% if user.profile.role == 'admin' or user.profile.can_manage_purchases %}
+                <a href="{% url 'purchase_edit' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="text-center text-muted empty-state">No purchases found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% include 'core/_pagination.html' %}
+</main>
+{% endblock %}
+

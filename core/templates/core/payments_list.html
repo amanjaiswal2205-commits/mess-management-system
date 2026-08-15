@@ -1,0 +1,82 @@
+﻿{% extends 'core/base.html' %}
+{% block title %}Payments | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Payments</h4>
+    {% if user.profile.role == 'admin' or user.profile.can_manage_payments %}
+    <a href="{% url 'payment_add' %}" class="btn btn-success btn-sm shadow-sm">Add Payment</a>
+    {% endif %}
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Search Payments</h5>
+    </div>
+    <div class="card-body">
+      <form class="row g-2 align-items-end" method="get">
+    <div class="col-sm-4">
+      <input type="text" name="q" value="{{ request.GET.q }}" class="form-control" placeholder="Search by student name / txn id">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-success">Filter</button>
+      <a class="btn btn-outline-secondary" href="{% url 'payments_list' %}">Reset</a>
+    </div>
+  </form>
+
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">All Payments</h5>
+    </div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Month</th>
+              <th class="text-end">Amount</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Txn ID</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in payments %}
+            <tr>
+              <td>
+                <span class="badge badge-soft">
+                  {{ p.student.user.get_full_name|default:p.student.user.username }}
+                </span>
+              </td>
+              <td>{{ p.month|date:"M Y" }}</td>
+              <td class="text-end">₹ {{ p.amount }}</td>
+              <td>{{ p.method }}</td>
+              <td>
+                {% if p.status == "PAID" %}
+                  <span class="badge bg-success">PAID</span>
+                {% elif p.status == "PENDING" %}
+                  <span class="badge bg-warning text-dark">PENDING</span>
+                {% else %}
+                  <span class="badge bg-danger">FAILED</span>
+                {% endif %}
+              </td>
+              <td>{{ p.txn_id|default:"—" }}</td>
+               <td>{{ p.created_at|date:"d-m-Y h:i A" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted empty-state">No payments found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% include 'core/_pagination.html' %}
+</main>
+{% endblock %}
+

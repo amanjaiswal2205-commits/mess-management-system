@@ -1,0 +1,97 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if purchase %}Edit Purchase{% else %}Add Purchase{% endif %} | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5 fade-in-up">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">{% if purchase %}Edit Purchase{% else %}Add Purchase{% endif %}</h4>
+    <a href="{% url 'purchases_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">{{ form.supplier.label }}{% if form.supplier.field.required %} *{% endif %}</label>
+            {{ form.supplier }}
+            {% if form.supplier.errors %}<div class="invalid-feedback d-block">{{ form.supplier.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ form.bill_no.label }}{% if form.bill_no.field.required %} *{% endif %}</label>
+            {{ form.bill_no }}
+            {% if form.bill_no.errors %}<div class="invalid-feedback d-block">{{ form.bill_no.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ form.bill_date.label }}{% if form.bill_date.field.required %} *{% endif %}</label>
+            {{ form.bill_date }}
+            {% if form.bill_date.errors %}<div class="invalid-feedback d-block">{{ form.bill_date.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.period.label }}{% if form.period.field.required %} *{% endif %}</label>
+            {{ form.period }}
+            {% if form.period.errors %}<div class="invalid-feedback d-block">{{ form.period.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">{{ form.item.label }}{% if form.item.field.required %} *{% endif %}</label>
+            {{ form.item }}
+            {% if form.item.errors %}<div class="invalid-feedback d-block">{{ form.item.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ form.qty.label }}{% if form.qty.field.required %} *{% endif %}</label>
+            {{ form.qty }}
+            {% if form.qty.errors %}<div class="invalid-feedback d-block">{{ form.qty.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ form.unit.label }}{% if form.unit.field.required %} *{% endif %}</label>
+            {{ form.unit }}
+            {% if form.unit.errors %}<div class="invalid-feedback d-block">{{ form.unit.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ form.rate.label }}{% if form.rate.field.required %} *{% endif %}</label>
+            {{ form.rate }}
+            {% if form.rate.errors %}<div class="invalid-feedback d-block">{{ form.rate.errors }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">{{ form.amount.label }}{% if form.amount.field.required %} *{% endif %}</label>
+            <input type="text" id="amount_preview" class="form-control" readonly value="{{ form.amount.value|default:'' }}">
+          </div>
+          <div class="col-12">
+            <label class="form-label">{{ form.bill_file.label }}</label>
+            {{ form.bill_file }}
+            {% if form.bill_file.errors %}<div class="invalid-feedback d-block">{{ form.bill_file.errors }}</div>{% endif %}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex justify-content-end gap-2">
+          <a href="{% url 'purchases_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-success">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    function updateAmount() {
+      var qty = parseFloat(document.getElementById('id_qty').value) || 0;
+      var rate = parseFloat(document.getElementById('id_rate').value) || 0;
+      var amount = (qty * rate).toFixed(2);
+      document.getElementById('amount_preview').value = amount;
+    }
+    var qtyEl = document.getElementById('id_qty');
+    var rateEl = document.getElementById('id_rate');
+    if (qtyEl) qtyEl.addEventListener('input', updateAmount);
+    if (rateEl) rateEl.addEventListener('input', updateAmount);
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,25 @@
+﻿# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+
+# Django
+staticfiles/
+media/
+
+# Database backups
+data_backup_*.json
+*.sql
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/

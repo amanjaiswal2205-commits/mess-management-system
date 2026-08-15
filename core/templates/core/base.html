@@ -1,0 +1,347 @@
+{% load socialaccount auth_extras %}{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Mess Management{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <style>
+    :root {
+      --mess-green: #198754;
+      --soft-bg: #f7faf8;
+      --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --card-radius: 0.75rem;
+    }
+
+    body {
+      background: #f5f6f8;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+    }
+
+    main.container {
+      padding-top: 1.5rem;
+      padding-bottom: 3rem;
+    }
+
+    .navbar {
+      background-color: var(--mess-green);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .navbar .nav-link {
+      color: #fff;
+      font-weight: 500;
+      position: relative;
+      transition: color 0.3s ease;
+    }
+
+    .navbar .nav-link::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 0%;
+      height: 2px;
+      background-color: #fff;
+      transition: width 0.3s ease;
+    }
+
+    .navbar .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .navbar .nav-link:hover {
+      color: #e2e6ea;
+    }
+
+    .navbar-brand {
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      font-size: 1.3rem;
+    }
+
+    .fade-in-up {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.8s forwards;
+    }
+
+    @keyframes fadeUp {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      background: #fff;
+      border: none;
+      border-radius: var(--card-radius);
+      box-shadow: var(--card-shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .card-title {
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    h4, h5.card-title {
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .btn {
+      border-radius: 0.5rem;
+      font-weight: 500;
+    }
+
+    .btn-sm {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .table thead th {
+      background: #eef3ef;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #e5e7eb;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      vertical-align: middle;
+    }
+
+    .table td, .table th {
+      vertical-align: middle;
+      padding: 0.75rem 1rem;
+    }
+
+    .table-hover tbody tr {
+      transition: background 0.2s ease;
+    }
+
+    .table-hover tbody tr:hover {
+      background: #f1fdf4;
+    }
+
+    .badge-soft {
+      background: #e9f7ee;
+      color: #198754;
+    }
+
+    td.text-end {
+      text-align: right;
+    }
+
+    .text-shadow {
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    }
+
+    a.month-link {
+      text-decoration: none;
+      font-weight: 600;
+      color: #198754;
+    }
+
+    a.month-link:hover {
+      text-decoration: underline;
+    }
+
+    .form-label {
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.35rem;
+    }
+
+    .form-control, .form-select {
+      border-radius: 0.5rem;
+      border: 1px solid #d1d5db;
+      padding: 0.5rem 0.75rem;
+      min-height: 2.5rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--mess-green);
+      box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15);
+    }
+
+    .form-text {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-top: 0.25rem;
+    }
+
+    .text-danger.small {
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+    }
+
+    .alert {
+      border-radius: 0.5rem;
+      border: none;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #6b7280;
+      font-style: italic;
+      padding: 1.5rem 0;
+    }
+
+    footer {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    footer a {
+      color: #198754;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    html, body {
+      overflow-x: hidden;
+    }
+
+    @media (max-width: 576px) {
+      .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+
+      main.container {
+        padding-top: 1rem;
+        padding-bottom: 2rem;
+      }
+
+      .table-responsive {
+        border-radius: 0.5rem;
+      }
+    }
+
+    @media (min-width: 992px) {
+      .navbar .nav-link {
+        padding-left: 0.45rem;
+        padding-right: 0.45rem;
+      }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{% url 'dashboard' %}">Hostel Mess</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        {% if user.is_authenticated %}
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 flex-lg-nowrap">
+          <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'student_list' %}">Students</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'payment_summary' %}">Payments</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'purchases_list' %}">Purchases</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'expenses_list' %}">Expenses</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'settlement_list' %}">Settlements</a></li>
+
+          {% if user.profile.role == 'admin' %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Management
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <li><a class="dropdown-item" href="{% url 'period_default_fee_set' %}">Default Fee</a></li>
+              <li><a class="dropdown-item" href="{% url 'user_manage' %}">User Management</a></li>
+              <li><a class="dropdown-item" href="{% url 'user_activity' %}">User Activity</a></li>
+            </ul>
+          </li>
+          {% elif user.profile.role == 'staff' %}
+          {% if user.profile.can_manage_students %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'student_add' %}">Add Student</a></li>
+          {% endif %}
+          {% if user.profile.can_manage_payments %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'payment_add' %}">Add Payment</a></li>
+          {% endif %}
+          {% if user.profile.can_manage_settlements %}
+          <li class="nav-item"><a class="nav-link" href="{% url 'period_default_fee_set' %}">Default Fee</a></li>
+          {% endif %}
+          {% endif %}
+
+          {% if user.profile.role == 'admin' or user.profile.can_view_reports %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Reports
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark">
+              <li><a class="dropdown-item" href="{% url 'master_report' %}">Master Report</a></li>
+              <li><a class="dropdown-item" href="{% url 'purchases_report' %}">Purchase Report</a></li>
+            </ul>
+          </li>
+          {% endif %}
+
+          <li class="nav-item d-flex align-items-center" style="margin-left: auto;">
+            <span class="badge bg-{% if user.profile.role == 'admin' %}danger{% elif user.profile.role == 'staff' %}warning text-dark{% else %}secondary{% endif %} mx-2">
+              {{ user.profile.get_role_display|upper }}
+            </span>
+          </li>
+        </ul>
+        <div class="d-flex align-items-center gap-3 flex-lg-nowrap">
+          <span class="navbar-text mb-0 text-truncate" style="max-width: 150px; display: inline-block;">{{ user.email }}</span>
+          <a class="btn btn-outline-light btn-sm" href="{% url 'account_logout' %}">Logout</a>
+        </div>
+        {% else %}
+        <div class="ms-auto">
+          <a class="btn btn-success btn-sm shadow-sm" href="{% url 'account_login' %}">Login</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  {% if messages %}
+  <div class="container my-3">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  <!-- Footer -->
+  <footer class="text-center py-4 bg-light border-top">
+    <small>
+      &copy; {{ now|date:"Y" }} Hostel Mess Management. Designed by <strong>Aman Jaiswal</strong> —
+      <a href="https://hostelmess.in" target="_blank">hostelmess.in</a>
+    </small>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

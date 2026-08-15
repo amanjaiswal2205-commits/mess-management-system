@@ -1,0 +1,127 @@
+{% extends 'core/base.html' %}
+{% block title %}Staff Permissions | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header bg-white border-0 py-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Edit Staff Permissions</h5>
+            <a href="{% url 'user_manage' %}" class="btn btn-outline-secondary btn-sm">← Back to User Management</a>
+          </div>
+        </div>
+        <div class="card-body">
+
+          <p class="text-muted mb-4">
+            <strong>User:</strong> {{ target_user.get_full_name|default:target_user.username }} ({{ target_user.username }})<br>
+            <strong>Email:</strong> {{ target_user.email }}<br>
+            <strong>Role:</strong>
+            {% if profile.role == 'admin' %}
+              <span class="badge bg-danger">ADMIN</span>
+            {% elif profile.role == 'staff' %}
+              <span class="badge bg-warning text-dark">STAFF</span>
+            {% else %}
+              <span class="badge bg-secondary">VIEWER</span>
+            {% endif %}
+          </p>
+
+          <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                  <p class="mb-0">{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted small fw-bold mb-2">STUDENT PERMISSIONS</h6>
+              <div class="border rounded p-3 mb-3">
+                <div class="form-check mb-2">
+                  {{ form.can_manage_students }}
+                  <label class="form-check-label" for="{{ form.can_manage_students.id_for_label }}">Manage Students</label>
+                  <div class="form-text small">Can add, edit, and deactivate students</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted small fw-bold mb-2">PAYMENT PERMISSIONS</h6>
+              <div class="border rounded p-3 mb-3">
+                <div class="form-check mb-2">
+                  {{ form.can_manage_payments }}
+                  <label class="form-check-label" for="{{ form.can_manage_payments.id_for_label }}">Manage Payments</label>
+                  <div class="form-text small">Can add payments and set due amounts</div>
+                </div>
+                <div class="form-check mb-2">
+                  {{ form.can_export_payment_excel }}
+                  <label class="form-check-label" for="{{ form.can_export_payment_excel.id_for_label }}">Export Payment Excel</label>
+                </div>
+                <div class="form-check mb-2">
+                  {{ form.can_export_collection_excel }}
+                  <label class="form-check-label" for="{{ form.can_export_collection_excel.id_for_label }}">Export Collection Excel</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted small fw-bold mb-2">EXPENSE PERMISSIONS</h6>
+              <div class="border rounded p-3 mb-3">
+                <div class="form-check mb-2">
+                  {{ form.can_manage_expenses }}
+                  <label class="form-check-label" for="{{ form.can_manage_expenses.id_for_label }}">Manage Expenses</label>
+                  <div class="form-text small">Can manage labour and other expenses</div>
+                </div>
+                <div class="form-check mb-2">
+                  {{ form.can_export_expense_excel }}
+                  <label class="form-check-label" for="{{ form.can_export_expense_excel.id_for_label }}">Export Expense Excel</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted small fw-bold mb-2">PURCHASE PERMISSIONS</h6>
+              <div class="border rounded p-3 mb-3">
+                <div class="form-check mb-2">
+                  {{ form.can_manage_purchases }}
+                  <label class="form-check-label" for="{{ form.can_manage_purchases.id_for_label }}">Manage Purchases</label>
+                  <div class="form-text small">Can add and manage purchase records</div>
+                </div>
+                <div class="form-check mb-2">
+                  {{ form.can_export_purchase_excel }}
+                  <label class="form-check-label" for="{{ form.can_export_purchase_excel.id_for_label }}">Export Purchase Excel</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h6 class="text-uppercase text-muted small fw-bold mb-2">OTHER</h6>
+              <div class="border rounded p-3 mb-3">
+                <div class="form-check mb-2">
+                  {{ form.can_manage_settlements }}
+                  <label class="form-check-label" for="{{ form.can_manage_settlements.id_for_label }}">Manage Settlements</label>
+                  <div class="form-text small">Can generate and manage monthly settlements</div>
+                </div>
+                <div class="form-check mb-2">
+                  {{ form.can_view_reports }}
+                  <label class="form-check-label" for="{{ form.can_view_reports.id_for_label }}">View Reports</label>
+                  <div class="form-text small">Can view and export reports</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+              <a href="{% url 'user_manage' %}" class="btn btn-outline-secondary">Cancel</a>
+              <button type="submit" class="btn btn-success">Save Permissions</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
