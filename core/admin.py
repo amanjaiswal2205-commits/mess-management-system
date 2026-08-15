@@ -85,6 +85,7 @@ class PaymentAdmin(admin.ModelAdmin):
                     'method', 'status', 'txn_id', 'created_at')
     list_filter = ('status', 'method', 'month', 'period')
     search_fields = ('student__hostel_id', 'student__user__username', 'txn_id')
+    autocomplete_fields = ('student',)
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at',)
