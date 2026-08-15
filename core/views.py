@@ -98,9 +98,9 @@ def signup(request):
     if request.method == 'POST':
         form = SignupForm(request.POST)
         if form.is_valid():
-            user = form.save(request)
-            login(request, user)
-            return redirect('dashboard')
+            form.save(request)
+            messages.success(request, 'Account created successfully! Please login to continue.')
+            return redirect('account_login')
     else:
         form = SignupForm()
     return render(request, 'core/signup.html', {'form': form})
