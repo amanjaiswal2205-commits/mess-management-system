@@ -345,7 +345,11 @@ def payment_summary(request):
             total_paid = float(total_paid) if total_paid else 0
             remaining = account.get_display_remaining()
             remaining = float(remaining) if str(remaining).replace('-', '').replace('.', '').isdigit() else 0
-            is_pending = total_paid < float(account.total_to_collect or 0)
+            collect = float(account.total_to_collect or 0)
+            if collect > 0:
+                is_pending = total_paid < collect
+            else:
+                is_pending = True
             status_class = 'bg-success' if not is_pending else 'bg-warning text-dark'
             status_text = 'Paid' if not is_pending else 'Due'
             summary.append({
