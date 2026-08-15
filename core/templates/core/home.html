@@ -1,0 +1,19 @@
+{% extends 'core/base.html' %}
+{% block title %}Home | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <section class="text-center py-5">
+    <div class="bg-white rounded-4 shadow-sm p-5 max-w-2xl mx-auto">
+      <h1 class="display-5 fw-bold text-success mb-3">Welcome to Hostel Mess</h1>
+      <p class="lead text-muted mb-5">
+        Track payments, purchases, expenses & settlements — all in one place.
+      </p>
+      <div class="d-flex gap-3 justify-content-center flex-wrap">
+        <a href="/accounts/login/" class="btn btn-success btn-lg shadow-sm">Login to Dashboard</a>
+        <a href="{% url 'purchases_list' %}" class="btn btn-outline-secondary btn-lg">View Purchases</a>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}
