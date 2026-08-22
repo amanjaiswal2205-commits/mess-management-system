@@ -16,7 +16,7 @@ from django.contrib.auth import get_user_model, login
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection
 from django.db.models import Sum, Q
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
@@ -160,7 +160,12 @@ def send_otp_email(email, otp, purpose):
         f"https://hostelmess.in\n"
     )
 
-    send_mail(subject, body, from_email, [email])
+    try:
+        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
+        send_mail(subject, body, from_email, [email], connection=connection)
+    except Exception as exc:
+        logger.error("Failed to send OTP email to %s: %s", email, exc)
+        raise
 
 
 def register(request):
