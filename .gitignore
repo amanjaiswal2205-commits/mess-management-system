@@ -23,3 +23,9 @@ data_backup_*.json
 # IDE
 .vscode/
 .idea/
+
+# Local server logs
+server_err.log
+server_err.txt
+server_out.log
+server_out.txt
