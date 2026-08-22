@@ -16,12 +16,25 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from core.views import signup, google_login
+from core.views import (
+    signup,
+    google_login,
+    register,
+    otp_verify_placeholder,
+    forgot_password_request,
+    forgot_password_verify,
+    forgot_password_reset,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/register/', register, name='account_register'),
+    path('accounts/verify-otp/', otp_verify_placeholder, name='otp_verify_placeholder'),
     path('accounts/signup/', signup, name='account_signup'),
     path('accounts/google/login/', google_login, name='google_login'),
+    path('accounts/forgot-password/', forgot_password_request, name='forgot_password_request'),
+    path('accounts/forgot-password/verify/', forgot_password_verify, name='forgot_password_verify'),
+    path('accounts/forgot-password/reset/', forgot_password_reset, name='forgot_password_reset'),
     path('accounts/', include('allauth.urls')),
     path('', include('core.urls')),   # 👈 core app ke urls include
 ]

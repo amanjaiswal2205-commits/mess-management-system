@@ -61,12 +61,22 @@ class AccountingPeriodAdmin(admin.ModelAdmin):
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'hostel_id', 'room_no', 'phone', 'is_active', 'user')
-    search_fields = ('hostel_id', 'room_no', 'phone',
+    list_display = ('id', 'hostel_id', 'student_name', 'room_no', 'phone', 'email', 'is_active', 'user')
+    search_fields = ('hostel_id', 'student_name', 'room_no', 'phone', 'email',
                      'user__username', 'user__first_name', 'user__last_name')
     ordering = ('hostel_id',)
     list_per_page = 25
     list_editable = ('is_active',)
+    autocomplete_fields = ('user',)
+    fields = ('user', 'hostel_id', 'student_name', 'room_no', 'phone', 'email', 'is_active')
+
+    def save_model(self, request, obj, form, change):
+        if obj.student_name:
+            parts = obj.student_name.strip().split(' ', 1)
+            obj.user.first_name = parts[0]
+            obj.user.last_name = parts[1] if len(parts) > 1 else ''
+            obj.user.save()
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(StudentPeriodAccount)
@@ -82,7 +92,7 @@ class StudentPeriodAccountAdmin(admin.ModelAdmin):
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ('id', 'student', 'month', 'period', 'amount', 'adjustment_amount',
-                    'method', 'status', 'txn_id', 'created_at')
+                    'method', 'status', 'txn_id', 'payment_mode', 'created_at')
     list_filter = ('status', 'method', 'month', 'period')
     search_fields = ('student__hostel_id', 'student__user__username', 'txn_id')
     autocomplete_fields = ('student',)
@@ -90,6 +100,20 @@ class PaymentAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at',)
     list_editable = ('status',)
+    radio_fields = {'payment_mode': admin.HORIZONTAL}
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        from .views import send_payment_receipt_email
+        try:
+            send_payment_receipt_email(obj)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).error(
+                "Failed to send payment receipt email to %s: %s",
+                obj.student.email or getattr(obj.student.user, 'email', ''),
+                exc,
+            )
 
 
 @admin.register(Supplier)

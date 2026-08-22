@@ -261,32 +261,20 @@
           <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'student_list' %}">Students</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'payment_summary' %}">Payments</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'purchases_list' %}">Purchases</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'expenses_list' %}">Expenses</a></li>
-          <li class="nav-item"><a class="nav-link" href="{% url 'settlement_list' %}">Settlements</a></li>
 
-          {% if user.profile.role == 'admin' %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Management
+              Purchases
             </a>
             <ul class="dropdown-menu dropdown-menu-dark">
-              <li><a class="dropdown-item" href="{% url 'period_default_fee_set' %}">Default Fee</a></li>
-              <li><a class="dropdown-item" href="{% url 'user_manage' %}">User Management</a></li>
-              <li><a class="dropdown-item" href="{% url 'user_activity' %}">User Activity</a></li>
+              <li><a class="dropdown-item" href="{% url 'purchases_list' %}">All Purchases</a></li>
+              <li><a class="dropdown-item" href="{% url 'day_wise_purchase_report' %}">Day Wise Purchase</a></li>
             </ul>
           </li>
-          {% elif user.profile.role == 'staff' %}
-          {% if user.profile.can_manage_students %}
-          <li class="nav-item"><a class="nav-link" href="{% url 'student_add' %}">Add Student</a></li>
-          {% endif %}
-          {% if user.profile.can_manage_payments %}
-          <li class="nav-item"><a class="nav-link" href="{% url 'payment_add' %}">Add Payment</a></li>
-          {% endif %}
-          {% if user.profile.can_manage_settlements %}
-          <li class="nav-item"><a class="nav-link" href="{% url 'period_default_fee_set' %}">Default Fee</a></li>
-          {% endif %}
-          {% endif %}
+
+           <li class="nav-item"><a class="nav-link" href="{% url 'expenses_list' %}">Expenses</a></li>
+           <li class="nav-item"><a class="nav-link" href="{% url 'due_list' %}">Due List</a></li>
+
 
           {% if user.profile.role == 'admin' or user.profile.can_view_reports %}
           <li class="nav-item dropdown">

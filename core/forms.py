@@ -2,6 +2,41 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from .models import Student, Payment, StudentPeriodAccount, AccountingPeriod, MessSetting, PeriodDefaultFee, UserProfile, Purchase
+from allauth.account.models import EmailAddress
+
+
+class RegistrationForm(forms.Form):
+    full_name = forms.CharField(max_length=150, required=True, label="Full Name")
+    email = forms.EmailField(required=True, label="Gmail Address")
+    mobile = forms.CharField(max_length=15, required=True, label="Mobile Number")
+    password1 = forms.CharField(widget=forms.PasswordInput, required=True, label="Password")
+    password2 = forms.CharField(widget=forms.PasswordInput, required=True, label="Confirm Password")
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if not email.lower().endswith('@gmail.com'):
+            raise ValidationError("Enter a valid Gmail address ending with @gmail.com.")
+        if User.objects.filter(email=email).exists():
+            raise ValidationError("An account already exists with this Gmail address. Please log in.")
+        if EmailAddress.objects.filter(email=email).exists():
+            raise ValidationError("An account already exists with this Gmail address. Please log in.")
+        return email
+
+    def clean_mobile(self):
+        mobile = self.cleaned_data.get('mobile', '').strip()
+        if not mobile.isdigit() or len(mobile) != 10:
+            raise ValidationError("Enter a valid 10-digit mobile number.")
+        if not mobile.startswith(('6', '7', '8', '9')):
+            raise ValidationError("Enter a valid Indian mobile number.")
+        return mobile
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+        if password1 and password2 and password1 != password2:
+            raise ValidationError("Passwords do not match.")
+        return cleaned_data
 
 
 class SignupForm(forms.Form):
@@ -48,16 +83,17 @@ class SignupForm(forms.Form):
 
 
 class StudentForm(forms.ModelForm):
-    first_name = forms.CharField(max_length=150, required=True, label="First Name")
-    last_name = forms.CharField(max_length=150, required=False, label="Last Name")
+    student_name = forms.CharField(max_length=150, required=True, label="Student Name")
 
     class Meta:
         model = Student
-        fields = ['hostel_id', 'room_no', 'phone', 'is_active']
+        fields = ['hostel_id', 'student_name', 'room_no', 'phone', 'email', 'is_active']
         labels = {
             'hostel_id': 'Hostel ID / Roll Number (Optional)',
+            'student_name': 'Student Name',
             'room_no': 'Room Number',
             'phone': 'Phone Number',
+            'email': 'Gmail Address (Optional)',
             'is_active': 'Active',
         }
 
@@ -65,8 +101,13 @@ class StudentForm(forms.ModelForm):
         self.user_instance = kwargs.pop('user_instance', None)
         super().__init__(*args, **kwargs)
         if self.user_instance:
-            self.fields['first_name'].initial = self.user_instance.first_name
-            self.fields['last_name'].initial = self.user_instance.last_name
+            initial_name = (
+                self.instance.student_name
+                or self.user_instance.get_full_name()
+                or self.user_instance.username
+                or ''
+            )
+            self.fields['student_name'].initial = initial_name
 
     def clean_hostel_id(self):
         hostel_id = self.cleaned_data.get('hostel_id')
@@ -82,15 +123,16 @@ class StudentForm(forms.ModelForm):
 
     def save(self, commit=True):
         student = super().save(commit=False)
+        student.student_name = self.cleaned_data['student_name'].strip()
         if self.user_instance:
             user = self.user_instance
-            user.first_name = self.cleaned_data['first_name']
-            user.last_name = self.cleaned_data['last_name']
         else:
             user = User()
-            user.first_name = self.cleaned_data['first_name']
-            user.last_name = self.cleaned_data['last_name']
             student.is_active = True
+
+        parts = self.cleaned_data['student_name'].strip().split(' ', 1)
+        user.first_name = parts[0]
+        user.last_name = parts[1] if len(parts) > 1 else ''
 
         if student.hostel_id:
             user.username = student.hostel_id
@@ -112,9 +154,10 @@ class StudentSearchForm(forms.Form):
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ['student', 'period', 'amount', 'month', 'method', 'txn_id', 'status']
+        fields = ['student', 'period', 'amount', 'month', 'method', 'txn_id', 'status', 'payment_mode']
         widgets = {
             'month': forms.DateInput(attrs={'type': 'date'}),
+            'payment_mode': forms.RadioSelect,
         }
         labels = {
             'student': 'Student',
@@ -124,13 +167,21 @@ class PaymentForm(forms.ModelForm):
             'method': 'Payment Mode',
             'txn_id': 'Transaction / Reference ID',
             'status': 'Status',
+            'payment_mode': 'Calculation Mode',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['payment_mode'].required = False
         self.fields['amount'].min_value = 0.01
         self.fields['status'].choices = [('PAID', 'PAID')]
         self.fields['status'].initial = 'PAID'
+
+    def clean_payment_mode(self):
+        value = self.cleaned_data.get('payment_mode')
+        if not value:
+            return 'custom_full'
+        return value
 
 
 class StudentPeriodAccountForm(forms.ModelForm):
@@ -249,3 +300,34 @@ class PurchaseForm(forms.ModelForm):
             'amount': 'Total Amount (₹)',
             'bill_file': 'Bill File',
         }
+
+
+class DayWisePurchaseReportForm(forms.Form):
+    date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label="Single Date",
+    )
+    from_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label="From Date",
+    )
+    to_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+        label="To Date",
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        from_date = cleaned_data.get('from_date')
+        to_date = cleaned_data.get('to_date')
+
+        if date and from_date:
+            raise forms.ValidationError("Select either a single date OR a date range, not both.")
+        if from_date and to_date and from_date > to_date:
+            raise forms.ValidationError("'From Date' cannot be later than 'To Date'.")
+
+        return cleaned_data

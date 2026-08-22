@@ -1,0 +1,173 @@
+{% extends 'core/base.html' %}
+{% block title %}Day Wise Purchase Report | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container-fluid my-5 fade-in-up">
+  <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-0">Day Wise Purchase Report</h4>
+      <p class="text-muted small mb-0">View and track daily purchase expenses</p>
+    </div>
+    {% if user.profile.role == 'admin' or user.profile.can_manage_purchases %}
+    <a href="{% url 'purchases_list' %}" class="btn btn-outline-secondary btn-sm shadow-sm">Back to Purchases</a>
+    {% endif %}
+  </div>
+
+  <!-- Filter Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Filter by Date</h5>
+    </div>
+    <div class="card-body">
+      <form method="get" class="form" id="purchase-filter-form">
+        <ul class="nav nav-tabs mb-3" id="filterTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="single-date-tab" data-bs-toggle="tab" data-bs-target="#single-date" type="button" role="tab" aria-controls="single-date" aria-selected="true">
+              Single Date
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="date-range-tab" data-bs-toggle="tab" data-bs-target="#date-range" type="button" role="tab" aria-controls="date-range" aria-selected="false">
+              Date Range
+            </button>
+          </li>
+        </ul>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+          {{ form.non_field_errors }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+
+        <div class="tab-content" id="filterTabsContent">
+          <!-- Single Date Tab -->
+          <div class="tab-pane fade show active" id="single-date" role="tabpanel" aria-labelledby="single-date-tab">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-5 col-lg-4">
+                <label for="{{ form.date.id_for_label }}" class="form-label">Select Date</label>
+                {{ form.date }}
+                {% if form.date.errors %}<div class="text-danger small">{{ form.date.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-7 col-lg-8 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-success px-4">View Report</button>
+                <a href="{% url 'day_wise_purchase_report' %}" class="btn btn-outline-secondary">Clear</a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Date Range Tab -->
+          <div class="tab-pane fade" id="date-range" role="tabpanel" aria-labelledby="date-range-tab">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-4">
+                <label for="{{ form.from_date.id_for_label }}" class="form-label">From Date</label>
+                {{ form.from_date }}
+                {% if form.from_date.errors %}<div class="text-danger small">{{ form.from_date.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-4">
+                <label for="{{ form.to_date.id_for_label }}" class="form-label">To Date</label>
+                {{ form.to_date }}
+                {% if form.to_date.errors %}<div class="text-danger small">{{ form.to_date.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="col-md-4 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-success px-4">View Range</button>
+                <a href="{% url 'day_wise_purchase_report' %}" class="btn btn-outline-secondary">Clear</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  {% if filter_applied %}
+  <div class="card shadow-sm">
+    <div class="card-header bg-white border-0 py-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h5 class="card-title mb-0">
+            {% if selected_date %}
+            <span class="text-dark">Date:</span> {{ selected_date }}
+            {% elif date_range %}
+            <span class="text-dark">Date Range:</span> {{ date_range.0|date:"d M Y" }} – {{ date_range.1|date:"d M Y" }}
+            {% endif %}
+          </h5>
+          <span class="badge bg-light text-dark">{{ total_entries }} Purchase Entr{{ total_entries|pluralize:"y,ies" }}</span>
+        </div>
+        <div class="text-end">
+          <span class="text-muted small d-block">Total Purchase Amount</span>
+          <span class="fs-4 fw-bold text-success">₹ {{ total_amount|floatformat:2 }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Purchase Date</th>
+              <th scope="col">Item</th>
+              <th scope="col" class="text-end">Qty</th>
+              <th scope="col" class="text-start">Unit</th>
+              <th scope="col" class="text-end">Rate (₹)</th>
+              <th scope="col" class="text-end">Total Amount (₹)</th>
+              <th scope="col">Supplier</th>
+              <th scope="col" class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in purchases %}
+            <tr>
+              <td class="text-muted">{{ forloop.counter }}</td>
+              <td>{{ p.bill_date|date:"d M Y" }}</td>
+              <td>{{ p.item.name|default:"—" }}</td>
+              <td class="text-end">{{ p.qty }}</td>
+              <td class="text-start">{{ p.unit|default:"—" }}</td>
+              <td class="text-end">{{ p.rate|floatformat:2 }}</td>
+              <td class="text-end fw-medium">₹ {{ p.amount|floatformat:2 }}</td>
+              <td>{{ p.supplier.name|default:"N/A" }}</td>
+              <td class="text-center">
+                <span class="text-muted">—</span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-4 empty-state">
+                <div class="d-flex flex-column align-items-center">
+                  <i class="d-block mb-2" style="font-size: 2rem; opacity: 0.3;">📋</i>
+                  <span>No purchases found for the selected period.</span>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if purchases %}
+          <tfoot class="table-light">
+            <tr>
+              <th colspan="6" scope="row" class="text-end">Total Purchase Amount</th>
+              <th class="text-end fw-bold">₹ {{ total_amount|floatformat:2 }}</th>
+              <th colspan="2"></th>
+            </tr>
+          </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card">
+    <div class="card-body">
+      <div class="text-center text-muted py-5 empty-state">
+        <div class="d-flex flex-column align-items-center">
+          <i class="d-block mb-3" style="font-size: 3rem; opacity: 0.2;">📊</i>
+          <h5 class="text-dark">Select a date or date range to view purchase report.</h5>
+          <p class="small">Use the filter above to select a single date or a from-to date range.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

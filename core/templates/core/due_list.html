@@ -1,13 +1,10 @@
 {% extends 'core/base.html' %}
-{% block title %}Payment Summary | Mess Management{% endblock %}
+{% block title %}Due List | Mess Management{% endblock %}
 
 {% block content %}
 <main class="container my-5">
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h4 class="mb-0">Payment Summary</h4>
-    {% if user.profile.role == 'admin' and selected_period %}
-    <a href="{% url 'payments_summary_export_excel' %}?period={{ selected_period.pk }}" class="btn btn-outline-primary btn-sm shadow-sm">Export to Excel</a>
-    {% endif %}
+    <h4 class="mb-0">Due List</h4>
   </div>
 
   <div class="card mb-4">
@@ -25,9 +22,28 @@
   </div>
 
   {% if selected_period %}
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <h6 class="text-muted mb-2">Total Students With Due</h6>
+          <div class="metric text-warning">{{ total_students_with_due }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <h6 class="text-muted mb-2">Total Outstanding Due</h6>
+          <div class="metric text-danger">₹ {{ total_outstanding_due }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-header bg-white border-0 py-3">
-      <h5 class="card-title mb-0">{{ selected_period.name }} — Student Payments</h5>
+      <h5 class="card-title mb-0">{{ selected_period.name }} — Outstanding Dues</h5>
     </div>
     <div class="card-body">
       <div class="table-responsive">
@@ -37,23 +53,23 @@
               <th>Student</th>
               <th>Hostel ID</th>
               <th>Room</th>
-              <th class="text-end">Total to Collect</th>
+              <th class="text-end">Total To Collect</th>
               <th class="text-end">Total Paid</th>
-              <th class="text-end">Remaining</th>
+              <th class="text-end">Remaining Due</th>
               <th>Due Type</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {% for row in summary %}
+            {% for row in due_list %}
             <tr>
               <td>{{ row.student.student_name|default:row.student.user.get_full_name|default:row.student.user.username }}</td>
               <td>{{ row.student.hostel_id|default:"—" }}</td>
               <td>{{ row.student.room_no|default:"—" }}</td>
               <td class="text-end">₹ {{ row.total_to_collect }}</td>
               <td class="text-end">₹ {{ row.total_paid }}</td>
-              <td class="text-end">₹ {{ row.display_remaining }}</td>
+              <td class="text-end">₹ {{ row.remaining_due }}</td>
               <td>
                 {% if row.remaining_type == "Manual" %}
                   <span class="badge bg-warning text-dark">Manual</span>
@@ -61,14 +77,14 @@
                   <span class="badge bg-info">Auto</span>
                 {% endif %}
               </td>
-              <td><span class="badge {{ row.status_class }}">{{ row.status }}</span></td>
+              <td><span class="badge bg-warning text-dark">DUE</span></td>
               <td>
                 <a href="{% url 'payment_history' student_id=row.student.pk period_id=selected_period.pk %}" class="btn btn-sm btn-outline-info">History</a>
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="9" class="text-center text-muted empty-state">No student accounts found for this period. Set due amounts to begin.</td>
+              <td colspan="9" class="text-center text-muted empty-state">No outstanding dues for this accounting period.</td>
             </tr>
             {% endfor %}
           </tbody>

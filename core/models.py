@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.contrib.auth.hashers import make_password, check_password
 
 
 # User profile for login activity tracking
@@ -87,14 +88,19 @@ class PeriodDefaultFee(models.Model):
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
     hostel_id = models.CharField(max_length=20, unique=True, blank=True, null=True)
+    student_name = models.CharField(max_length=150, blank=True, default='', help_text="Proper display name with spaces (e.g. Aman Jaiswal). Used in payment receipt emails. Duplicate names allowed.")
     room_no = models.CharField(max_length=10, blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
+    email = models.EmailField(max_length=254, blank=True, help_text="Optional Gmail address for payment receipts")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        full_name = self.user.get_full_name() or self.user.username
+        full_name = self.student_name or self.user.get_full_name() or self.user.username
         hostel = self.hostel_id or "No ID"
         return f"{hostel} - {full_name}"
+
+    def get_display_name(self):
+        return self.student_name or self.user.get_full_name() or self.user.username
 
 
 # Student period-wise due/account
@@ -147,6 +153,10 @@ class Payment(models.Model):
         ('PENDING', 'PENDING'),
         ('PAID', 'PAID'),
     ]
+    PAYMENT_MODE_CHOICES = [
+        ('default_fee', 'Use Default Fee'),
+        ('custom_full', 'Custom / Full Paid Amount'),
+    ]
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='payments')
     month = models.DateField(help_text="Use the first day of the month")
@@ -156,6 +166,10 @@ class Payment(models.Model):
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default='UPI')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     txn_id = models.CharField(max_length=100, blank=True)
+    payment_mode = models.CharField(
+        max_length=20, choices=PAYMENT_MODE_CHOICES, default='custom_full',
+        help_text="Use Default Fee = apply this period's configured default fee for future calculations. Custom Full Paid = this payment amount IS the total full due."
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -282,7 +296,7 @@ class MonthlySettlement(models.Model):
     accounting_period = models.ForeignKey(AccountingPeriod, on_delete=models.SET_NULL, null=True, blank=True, related_name='settlements')
     total_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_expense = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    surplus_deficit = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # +surplus / -deficit
+    surplus_deficit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     per_student_adjustment = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     opening_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     closing_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -293,3 +307,29 @@ class MonthlySettlement(models.Model):
 
     def __str__(self):
         return f"{self.month:%b %Y} | Surplus: ₹{self.surplus_deficit} | Finalized: {self.finalized}"
+
+
+class EmailOTP(models.Model):
+    PURPOSE_CHOICES = [
+        ('signup', 'Signup'),
+        ('forgot_password', 'Forgot Password'),
+    ]
+    email = models.CharField(max_length=254)
+    otp_hash = models.CharField(max_length=128)
+    purpose = models.CharField(max_length=20, choices=PURPOSE_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.email} - {self.purpose} - verified={self.is_verified}"
+
+    @staticmethod
+    def hash_otp(otp):
+        return make_password(otp)
+
+    def verify_otp(self, otp):
+        return check_password(otp, self.otp_hash)

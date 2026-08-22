@@ -11,7 +11,7 @@
       </div>
       <div class="card-body">
         <p class="text-muted mb-4">
-          <strong>{{ student.user.get_full_name|default:student.user.username }}</strong> ({{ student.hostel_id|default:"—" }}) — {{ period.name }}
+          <strong>{{ student.student_name|default:student.user.get_full_name|default:student.user.username }}</strong> ({{ student.hostel_id|default:"—" }}) — {{ period.name }}
         </p>
 
         <div class="alert alert-info mb-4">

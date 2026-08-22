@@ -29,6 +29,7 @@ urlpatterns = [
     path('payments/export/summary/excel/', views.payments_summary_export_excel, name='payments_summary_export_excel'),
     path('payments/due/<int:student_id>/<int:period_id>/', views.payment_due_edit, name='payment_due_edit'),
     path('payments/history/<int:student_id>/<int:period_id>/', views.payment_history, name='payment_history'),
+    path('due-list/', views.due_list, name='due_list'),
     path('api/students/search/', views.student_search_api, name='student_search_api'),
 
     # Purchases
@@ -51,6 +52,7 @@ urlpatterns = [
 
     # Reports
     path('reports/purchases/', views.purchases_report, name='purchases_report'),
+    path('reports/purchases/day-wise/', views.day_wise_purchase_report, name='day_wise_purchase_report'),
     path('reports/master/', views.master_report, name='master_report'),
 
     # User Activity (Admin Only)

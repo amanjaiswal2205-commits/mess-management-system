@@ -131,32 +131,57 @@
 
        <form method="post" action="{% url 'account_login' %}">
          {% csrf_token %}
+         {% if redirect_field_value %}
+           <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+         {% endif %}
          <h5 class="mb-3 text-center">Admin Login</h5>
+
+         {% if form.non_field_errors %}
+           <div class="alert alert-danger" role="alert">
+             {% for error in form.non_field_errors %}
+               <div>{{ error }}</div>
+             {% endfor %}
+           </div>
+         {% endif %}
+
          <div class="mb-3">
-           <label for="{{ form.login.id_for_label|default:'id_login' }}" class="form-label">Username</label>
-           <input type="text"
+           <label for="{{ form.login.id_for_label|default:'id_login' }}" class="form-label">Email Address</label>
+           <input type="email"
                   name="login"
                   id="{{ form.login.id_for_label|default:'id_login' }}"
-                  class="form-control"
+                  class="form-control{% if form.login.errors %} is-invalid{% endif %}"
+                  value="{{ form.login.value|default:'' }}"
+                  placeholder="you@gmail.com"
+                  autocomplete="email"
                   autofocus
                   required>
+           {% for error in form.login.errors %}
+             <div class="invalid-feedback d-block">{{ error }}</div>
+           {% endfor %}
          </div>
          <div class="mb-4">
            <label for="{{ form.password.id_for_label|default:'id_password' }}" class="form-label">Password</label>
            <input type="password"
                   name="password"
                   id="{{ form.password.id_for_label|default:'id_password' }}"
-                  class="form-control"
+                  class="form-control{% if form.password.errors %} is-invalid{% endif %}"
+                  autocomplete="current-password"
                   required>
+           {% for error in form.password.errors %}
+             <div class="invalid-feedback d-block">{{ error }}</div>
+           {% endfor %}
          </div>
-         <button type="submit" class="btn btn-primary w-100">Login</button>
-       </form>
+          <div class="d-flex justify-content-end mb-2">
+            <a href="{% url 'forgot_password_request' %}" class="small text-decoration-none">Forgot Password?</a>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
 
-       <div class="signup-hint text-center mt-4">
-         <p class="mb-1">Don't have an account?</p>
-         <a href="{% url 'account_signup' %}" class="text-decoration-none">Create Account</a>
-         <p class="mb-0 mt-2 small text-muted">New users can sign in with Google to create a viewer account.</p>
-       </div>
+        <div class="signup-hint text-center mt-4">
+          <p class="mb-1">Don't have an account?</p>
+          <a href="{% url 'account_register' %}" class="text-decoration-none">Create Account</a>
+          <p class="mb-0 mt-2 small text-muted">New users can sign in with Google to create a viewer account.</p>
+        </div>
      </div>
    </main>
 

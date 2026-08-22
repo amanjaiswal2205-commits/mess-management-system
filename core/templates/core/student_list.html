@@ -7,12 +7,6 @@
     <h4 class="mb-0">Student Management</h4>
     <div class="d-flex gap-2 align-items-center flex-wrap">
       {% if user.profile.role == 'admin' %}
-      <a href="{% url 'mess_setting' %}" class="btn btn-outline-primary btn-sm">⚙️ Set Total Students</a>
-      {% endif %}
-      {% if user.profile.role == 'admin' or user.profile.can_manage_students %}
-      <a href="{% url 'student_add' %}" class="btn btn-success btn-sm">Add Student</a>
-      {% endif %}
-      {% if user.profile.role == 'admin' %}
       <a href="{% url 'students_export_excel' %}" class="btn btn-outline-primary btn-sm">Export to Excel</a>
       {% endif %}
       <span class="text-muted align-self-center">
@@ -56,7 +50,7 @@
             {% for s in students %}
             <tr>
               <td><strong>{{ s.hostel_id }}</strong></td>
-              <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+              <td>{{ s.student_name|default:s.user.get_full_name|default:s.user.username }}</td>
               <td>{{ s.room_no|default:"—" }}</td>
               <td>{{ s.phone|default:"—" }}</td>
               <td>
@@ -67,12 +61,6 @@
                 {% endif %}
               </td>
               <td>
-                {% if user.profile.role == 'admin' or user.profile.can_manage_students %}
-                <a href="{% url 'student_edit' pk=s.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                <a href="{% url 'student_toggle_active' pk=s.pk %}" class="btn btn-sm btn-outline-warning">
-                  {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
-                </a>
-                {% endif %}
               </td>
             </tr>
             {% empty %}

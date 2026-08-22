@@ -5,9 +5,6 @@
 <main class="container my-5 fade-in-up">
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h4 class="mb-0">Purchases</h4>
-    {% if user.profile.role == 'admin' or user.profile.can_manage_purchases %}
-    <a href="{% url 'purchase_add' %}" class="btn btn-success btn-sm shadow-sm">Add Purchase</a>
-    {% endif %}
     {% if user.profile.role == 'admin' %}
     <a href="{% url 'purchases_export_excel' %}" class="btn btn-outline-primary btn-sm shadow-sm">Export to Excel</a>
     {% endif %}
@@ -45,9 +42,7 @@
               <td class="text-end">₹ {{ p.rate }}</td>
               <td class="text-end">₹ {{ p.amount }}</td>
               <td class="text-center">
-                {% if user.profile.role == 'admin' or user.profile.can_manage_purchases %}
-                <a href="{% url 'purchase_edit' p.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                {% endif %}
+                <span class="text-muted">—</span>
               </td>
             </tr>
             {% empty %}
