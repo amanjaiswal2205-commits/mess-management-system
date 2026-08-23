@@ -843,6 +843,11 @@ def payment_summary(request):
     if selected_period:
         accounts = StudentPeriodAccount.objects.filter(period=selected_period).select_related('student__user')
         for account in accounts:
+            has_payment = Payment.objects.filter(
+                student=account.student, period=selected_period
+            ).exists()
+            if not has_payment:
+                continue
             total_paid = Payment.objects.filter(
                 student=account.student, period=selected_period, status='PAID'
             ).aggregate(total=Sum('amount'))['total'] or 0
