@@ -105,15 +105,15 @@ class PaymentAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         from .views import send_payment_receipt_email
-        try:
-            send_payment_receipt_email(obj)
-        except Exception as exc:
-            import logging
-            logging.getLogger(__name__).error(
-                "Failed to send payment receipt email to %s: %s",
-                obj.student.email or getattr(obj.student.user, 'email', ''),
-                exc,
-            )
+        if not change and obj.status == 'PAID':
+            try:
+                send_payment_receipt_email(obj)
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).error(
+                    "Failed to send payment receipt email for payment %s: %s",
+                    obj.id, exc,
+                )
 
 
 @admin.register(Supplier)

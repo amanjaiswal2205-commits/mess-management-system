@@ -134,7 +134,7 @@
          {% if redirect_field_value %}
            <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
          {% endif %}
-         <h5 class="mb-3 text-center">Admin Login</h5>
+          <h5 class="mb-3 text-center">Login</h5>
 
          {% if form.non_field_errors %}
            <div class="alert alert-danger" role="alert">
@@ -145,7 +145,7 @@
          {% endif %}
 
          <div class="mb-3">
-           <label for="{{ form.login.id_for_label|default:'id_login' }}" class="form-label">Email Address</label>
+            <label for="{{ form.login.id_for_label|default:'id_login' }}" class="form-label">Gmail Address</label>
            <input type="email"
                   name="login"
                   id="{{ form.login.id_for_label|default:'id_login' }}"

@@ -87,7 +87,9 @@
           <button type="submit" class="btn btn-primary w-100" id="sendOtpBtn">Send OTP</button>
         </form>
 
-        <div id="otpSection" class="mt-4" style="display: none;">
+         <div id="registrationError" class="text-danger small mt-3"></div>
+
+         <div id="otpSection" class="mt-4" style="display: none;">
           <hr>
           <div class="alert alert-success" role="alert">
             OTP sent successfully! Please check your Gmail.
@@ -99,7 +101,7 @@
               <input type="text" name="otp" id="id_otp" class="form-control" maxlength="6" pattern="\d{6}" placeholder="123456" required autofocus>
               <div id="otpError" class="text-danger small mt-1"></div>
             </div>
-            <button type="submit" class="btn btn-success w-100" id="verifyOtpBtn">Verify OTP</button>
+             <button type="submit" class="btn btn-success w-100" id="verifyOtpBtn">Verify &amp; Create Account</button>
           </form>
         </div>
 
@@ -125,6 +127,10 @@
         form.addEventListener('submit', async function(e) {
           e.preventDefault();
           const btn = document.getElementById('sendOtpBtn');
+          const errorDiv = document.getElementById('registrationError');
+          if (errorDiv) {
+            errorDiv.textContent = '';
+          }
           btn.disabled = true;
           btn.textContent = 'Sending...';
 
@@ -178,7 +184,10 @@
               }
             }
           } catch (err) {
-            alert('Something went wrong. Please try again.');
+            const errorDiv = document.getElementById('registrationError');
+            if (errorDiv) {
+              errorDiv.textContent = 'Something went wrong. Please try again.';
+            }
             const btn = document.getElementById('sendOtpBtn');
             if (btn) {
               btn.disabled = false;
@@ -209,7 +218,15 @@
           const data = await response.json();
           if (data.success) {
             window.__otpVerified = true;
-            window.location.href = data.redirect_url;
+            const otpSection = document.getElementById('otpSection');
+            const successAlert = document.createElement('div');
+            successAlert.className = 'alert alert-success alert-dismissible fade show mt-3';
+            successAlert.setAttribute('role', 'alert');
+            successAlert.textContent = data.message || 'Account created successfully. You can now log in.';
+            otpSection.insertBefore(successAlert, otpSection.firstChild);
+            setTimeout(() => {
+              window.location.href = data.redirect_url;
+            }, 1500);
             return;
           }
           errorDiv.textContent = data.error || 'Verification failed. Please try again.';

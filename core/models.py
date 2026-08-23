@@ -18,6 +18,7 @@ class UserProfile(models.Model):
     is_active_user = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    mobile = models.CharField(max_length=15, blank=True, null=True)
 
     can_manage_students = models.BooleanField(default=False)
     can_manage_payments = models.BooleanField(default=False)

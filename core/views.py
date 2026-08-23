@@ -123,46 +123,203 @@ def google_login(request):
     return complete_social_login(request, adapter)
 
 
-def send_otp_email(email, otp, purpose):
+def send_otp_email(email, otp, purpose, name=None):
     """Send a 6-digit OTP to `email` using the configured central Gmail sender.
 
     `purpose` is 'signup' or 'forgot_password' and controls the subject/body.
+    `name` is the recipient's full name (used in signup emails).
     """
     if purpose == 'signup':
-        subject = 'Verify your email - Mess Management'
-        heading = 'Welcome to Mess Management'
+        subject = 'Verify Your Email | Hostel Mess Management System'
+        greeting_name = name or email.split('@')[0]
         intro = (
-            'Thanks for registering with the Mess Management System. '
-            'Use the One-Time Password (OTP) below to verify your email address '
-            'and create your account:'
+            'Thank you for registering with the Hostel Mess Management System. '
+            'Please use the One-Time Password (OTP) below to verify your email '
+            'address and create your account:'
         )
+        plain_body = (
+            f"Dear {greeting_name},\n\n"
+            f"{intro}\n\n"
+            f"Your OTP is: {otp}\n\n"
+            f"This OTP is valid for 10 minutes. Please do not share it with anyone.\n\n"
+            f"Registered Gmail address: {email}\n\n"
+            f"If you did not request this registration, you can safely ignore this email. "
+            f"No changes will be made to your account.\n\n"
+            f"Authorized Representative\n"
+            f"Mess Committee\n"
+            f"APJ Abdul Kalam Boys Hostel\n"
+            f"https://hostelmess.in\n"
+        )
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your Email</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+        <tr>
+            <td align="center" style="padding:20px 10px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:600px;">
+                    <tr>
+                        <td style="background-color:#1a5276; padding:30px 20px; text-align:center;">
+                            <h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:bold; line-height:1.3;">APJ Abdul Kalam Boys Hostel</h1>
+                            <p style="color:#d6eaf8; margin:8px 0 0 0; font-size:14px; font-weight:bold;">MESS COMMITTEE</p>
+                            <p style="color:#aed6f1; margin:4px 0 0 0; font-size:12px;">Hostel Mess Management System</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:30px 20px;">
+                            <p style="color:#333333; font-size:16px; margin:0 0 16px 0; line-height:1.5;">Dear {greeting_name},</p>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 20px 0;">
+                                {intro}
+                            </p>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;">
+                                <tr>
+                                    <td align="center" style="background-color:#eaf2f8; border:2px dashed #1a5276; border-radius:8px; padding:24px;">
+                                        <span style="font-size:36px; font-weight:bold; color:#1a5276; letter-spacing:8px;">{otp}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 16px 0;">
+                                <strong style="color:#1a5276;">This OTP is valid for 10 minutes.</strong>
+                            </p>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 16px 0;">
+                                Registered Gmail address: <strong>{email}</strong>
+                            </p>
+                            <p style="color:#c0392b; font-size:14px; line-height:1.6; margin:0 0 20px 0;">
+                                <strong>Security Warning:</strong> Never share this OTP with anyone. 
+                                Our team will never ask you for your OTP.
+                            </p>
+                            <p style="color:#777777; font-size:14px; line-height:1.6; margin:0;">
+                                If you did not request this registration, please ignore this email. 
+                                No changes will be made to your account.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f4f4f4; padding:20px; text-align:center; border-top:1px solid #dddddd;">
+                            <p style="color:#555555; font-size:12px; margin:0 0 8px 0; line-height:1.5;">
+                                <strong>Authorized Representative</strong><br>
+                                Mess Committee<br>
+                                APJ Abdul Kalam Boys Hostel
+                            </p>
+                            <p style="color:#777777; font-size:12px; margin:0;">
+                                <a href="https://hostelmess.in" style="color:#1a5276; text-decoration:none;">https://hostelmess.in</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
     else:
-        subject = 'Password Reset OTP - Mess Management'
-        heading = 'Password Reset Request'
+        subject = 'Password Reset OTP | Hostel Mess Management System'
+        greeting_name = name or email.split('@')[0]
         intro = (
-            'We received a request to reset the password for your Mess Management '
-            'account. Use the One-Time Password (OTP) below to continue:'
+            'We received a request to reset the password for your Hostel Mess '
+            'Management System account. Please use the One-Time Password (OTP) '
+            'below to continue:'
         )
+        plain_body = (
+            f"Dear {greeting_name},\n\n"
+            f"{intro}\n\n"
+            f"Your OTP is: {otp}\n\n"
+            f"This OTP is valid for 10 minutes. Please do not share it with anyone.\n\n"
+            f"Registered Gmail address: {email}\n\n"
+            f"If you did not request this password reset, you can safely ignore this email. "
+            f"No changes will be made to your account.\n\n"
+            f"Authorized Representative\n"
+            f"Mess Committee\n"
+            f"APJ Abdul Kalam Boys Hostel\n"
+            f"https://hostelmess.in\n"
+        )
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset OTP</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+        <tr>
+            <td align="center" style="padding:20px 10px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:600px;">
+                    <tr>
+                        <td style="background-color:#1a5276; padding:30px 20px; text-align:center;">
+                            <h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:bold; line-height:1.3;">APJ Abdul Kalam Boys Hostel</h1>
+                            <p style="color:#d6eaf8; margin:8px 0 0 0; font-size:14px; font-weight:bold;">MESS COMMITTEE</p>
+                            <p style="color:#aed6f1; margin:4px 0 0 0; font-size:12px;">Hostel Mess Management System</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:30px 20px;">
+                            <p style="color:#333333; font-size:16px; margin:0 0 16px 0; line-height:1.5;">Dear {greeting_name},</p>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 20px 0;">
+                                {intro}
+                            </p>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;">
+                                <tr>
+                                    <td align="center" style="background-color:#eaf2f8; border:2px dashed #1a5276; border-radius:8px; padding:24px;">
+                                        <span style="font-size:36px; font-weight:bold; color:#1a5276; letter-spacing:8px;">{otp}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 16px 0;">
+                                <strong style="color:#1a5276;">This OTP is valid for 10 minutes.</strong>
+                            </p>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 16px 0;">
+                                Registered Gmail address: <strong>{email}</strong>
+                            </p>
+                            <p style="color:#c0392b; font-size:14px; line-height:1.6; margin:0 0 20px 0;">
+                                <strong>Security Warning:</strong> Never share this OTP with anyone. 
+                                Our team will never ask you for your OTP.
+                            </p>
+                            <p style="color:#777777; font-size:14px; line-height:1.6; margin:0;">
+                                If you did not request this password reset, please ignore this email. 
+                                No changes will be made to your account.
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f4f4f4; padding:20px; text-align:center; border-top:1px solid #dddddd;">
+                            <p style="color:#555555; font-size:12px; margin:0 0 8px 0; line-height:1.5;">
+                                <strong>Authorized Representative</strong><br>
+                                Mess Committee<br>
+                                APJ Abdul Kalam Boys Hostel
+                            </p>
+                            <p style="color:#777777; font-size:12px; margin:0;">
+                                <a href="https://hostelmess.in" style="color:#1a5276; text-decoration:none;">https://hostelmess.in</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
 
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(
         settings, 'EMAIL_HOST_USER', ''
     )
-    body = (
-        f"{heading}\n"
-        f"{'=' * len(heading)}\n\n"
-        f"{intro}\n\n"
-        f"Your OTP is: {otp}\n\n"
-        f"This OTP is valid for 10 minutes only. Please do not share it with anyone.\n\n"
-        f"If you did not request this, you can safely ignore this email. No changes "
-        f"will be made to your account.\n\n"
-        f"Regards,\n"
-        f"Mess Management Team\n"
-        f"https://hostelmess.in\n"
-    )
 
     try:
         connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
-        send_mail(subject, body, from_email, [email], connection=connection)
+        email_kwargs = {
+            'subject': subject,
+            'message': plain_body,
+            'from_email': from_email,
+            'recipient_list': [email],
+            'connection': connection,
+        }
+        if html_body:
+            email_kwargs['html_message'] = html_body
+        send_mail(**email_kwargs)
     except Exception as exc:
         logger.error("Failed to send OTP email to %s: %s", email, exc)
         raise
@@ -193,7 +350,7 @@ def register(request):
             }
 
             try:
-                send_otp_email(email, otp, 'signup')
+                send_otp_email(email, otp, 'signup', name=form.cleaned_data.get('full_name', ''))
             except Exception as exc:
                 logger.error("Failed to send OTP email to %s: %s", email, exc)
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -243,10 +400,11 @@ def otp_verify_placeholder(request):
                 otp_error = 'Wrong OTP. Please try again.'
             else:
                 if UserModel.objects.filter(email=email).exists():
-                    otp_error = 'An account with this email already exists.'
+                    otp_error = 'An account already exists with this Gmail address. Please log in.'
                 else:
                     full_name = pending.get('full_name', '')
                     password = pending.get('password', '')
+                    mobile = pending.get('mobile', '')
 
                     user = UserModel.objects.create_user(
                         username=email,
@@ -257,14 +415,22 @@ def otp_verify_placeholder(request):
                     user.last_name = ''
                     user.save()
 
+                    profile, _ = UserProfile.objects.get_or_create(user=user)
+                    profile.mobile = mobile
+                    profile.save()
+
                     otp_record.is_verified = True
                     otp_record.save()
 
                     request.session.pop('pending_registration', None)
 
                     if is_ajax:
-                        return JsonResponse({'success': True, 'redirect_url': reverse('account_login')})
-                    messages.success(request, 'Account created successfully! Please login to continue.')
+                        return JsonResponse({
+                            'success': True,
+                            'redirect_url': reverse('account_login'),
+                            'message': 'Account created successfully. You can now log in.',
+                        })
+                    messages.success(request, 'Account created successfully. You can now log in.')
                     return redirect('account_login')
 
         if otp_error is not None and is_ajax:
@@ -283,12 +449,13 @@ def _normalize_email(value):
 
 def _validate_otp_format(otp):
     return bool(otp) and otp.isdigit() and len(otp) == 6
-
-
 def _forgot_password_send_otp(request, email):
     """Create and email a fresh reset OTP. Any prior unused reset OTPs for this
+
     email are invalidated first so a code can't be reused and only one valid
+
     code exists at a time."""
+
     EmailOTP.objects.filter(
         email=email, purpose='forgot_password', is_verified=False
     ).update(is_verified=True)
@@ -300,41 +467,56 @@ def _forgot_password_send_otp(request, email):
         purpose='forgot_password',
         expires_at=expires_at,
     )
-    send_otp_email(email, otp, 'forgot_password')
-
+    try:
+        user = UserModel.objects.get(email=email)
+        name = user.get_full_name() or user.username
+    except UserModel.DoesNotExist:
+        name = None
+    send_otp_email(email, otp, 'forgot_password', name=name)
 
 def forgot_password_request(request):
     if request.method == 'POST':
         email = _normalize_email(request.POST.get('email'))
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-        # Validate format; resolve the user. Respond identically for
-        # invalid/unknown emails so we don't reveal which addresses are
-        # registered (email enumeration protection).
-        user = None
-        if email:
-            try:
-                from django.core.validators import validate_email as _validate_email
-                _validate_email(email)
-                user = UserModel.objects.filter(email=email).first()
-            except Exception:
-                user = None
+        if not email:
+            error_msg = 'Please enter a valid email address.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': error_msg})
+            messages.error(request, error_msg)
+            return redirect('forgot_password_request')
 
-        if user is not None:
-            try:
-                _forgot_password_send_otp(request, email)
-            except Exception as exc:
-                logger.error("Failed to send password-reset OTP to %s: %s", email, exc)
-                if is_ajax:
-                    return JsonResponse(
-                        {'success': False, 'error': 'Could not send the OTP email. Please try again later.'}
-                    )
-                messages.error(request, 'Could not send the OTP email. Please try again later.')
-                return redirect('forgot_password_request')
-            request.session['password_reset_email'] = email
-            request.session.pop('password_reset_verified', None)
+        try:
+            from django.core.validators import validate_email as _validate_email
+            _validate_email(email)
+        except Exception:
+            error_msg = 'Please enter a valid email address.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': error_msg})
+            messages.error(request, error_msg)
+            return redirect('forgot_password_request')
 
-        # Same response whether the email exists or not.
+        user = UserModel.objects.filter(email=email).first()
+        if user is None:
+            error_msg = 'No account found with this email address.'
+            if is_ajax:
+                return JsonResponse({'success': False, 'error': error_msg})
+            messages.error(request, error_msg)
+            return redirect('forgot_password_request')
+
+        try:
+            _forgot_password_send_otp(request, email)
+        except Exception as exc:
+            logger.error("Failed to send password-reset OTP to %s: %s", email, exc)
+            if is_ajax:
+                return JsonResponse(
+                    {'success': False, 'error': 'Could not send the OTP email. Please try again later.'}
+                )
+            messages.error(request, 'Could not send the OTP email. Please try again later.')
+            return redirect('forgot_password_request')
+        request.session['password_reset_email'] = email
+        request.session.pop('password_reset_verified', None)
+
         if is_ajax:
             return JsonResponse(
                 {'success': True, 'otp_sent': True, 'redirect_url': reverse('forgot_password_verify')}
@@ -431,7 +613,7 @@ def forgot_password_reset(request):
         request.session.pop('password_reset_verified', None)
         request.session.pop('password_reset_email', None)
 
-        messages.success(request, 'Your password has been reset successfully. Please login with your new password.')
+        messages.success(request, 'Password changed successfully. You can now log in.')
         if is_ajax:
             return JsonResponse({'success': True, 'redirect_url': reverse('account_login')})
         return redirect('account_login')
@@ -668,10 +850,10 @@ def payment_summary(request):
             remaining = account.get_display_remaining()
             remaining = float(max(remaining or 0, 0))
             collect = float(account.total_to_collect or 0)
-            if collect > 0:
-                is_pending = total_paid < collect
+            if remaining > 0:
+                is_pending = True
             else:
-                is_pending = total_paid <= 0
+                is_pending = False
             status_class = 'bg-success' if not is_pending else 'bg-warning text-dark'
             status_text = 'Paid' if not is_pending else 'Due'
             summary.append({
@@ -692,72 +874,443 @@ def payment_summary(request):
 
 
 def send_payment_receipt_email(payment):
+    if payment.status != 'PAID':
+        logger.info(
+            "Payment receipt email skipped for payment %s: status is %s",
+            payment.id, payment.status,
+        )
+        return
+
     student = payment.student
     email = (student.email or '').strip()
     if not email:
         email = getattr(student.user, 'email', '').strip()
     if not email:
+        logger.info(
+            "Payment receipt email skipped for payment %s: student %s has no email",
+            payment.id, student.id,
+        )
         return
 
-    if payment.period:
-        billing_month = payment.period.name
-    elif payment.month:
-        billing_month = payment.month.strftime('%B %Y')
+    display_name = student.get_display_name()
+    billing_month = payment.period.name if payment.period_id else 'N/A'
+
+    account, _ = StudentPeriodAccount.objects.get_or_create(
+        student=payment.student,
+        period=payment.period,
+    )
+    total_fee = account.total_to_collect or 0
+    total_paid = account.get_total_paid() or 0
+    remaining = account.get_display_remaining() or 0
+    payment_status = 'Paid' if payment.status == 'PAID' else payment.status
+    if remaining <= 0:
+        status_label = 'PAID IN FULL'
     else:
-        billing_month = 'N/A'
+        status_label = 'DUE'
 
-    display_name = student.student_name or student.user.get_full_name() or student.user.username
+    payment_date = payment.created_at.strftime('%d %B %Y') if payment.created_at else 'N/A'
 
-    total_to_collect = 0
-    total_paid = 0
-    remaining_due = 0
+    room_no = student.room_no or 'N/A'
+    hostel_id = student.hostel_id or 'N/A'
+    method = payment.get_method_display() if hasattr(payment, 'get_method_display') else payment.method
+    txn_id = payment.txn_id or 'N/A'
 
-    if payment.period_id:
-        account = StudentPeriodAccount.objects.filter(student=student, period=payment.period).first()
-        if account:
-            total_to_collect = account.total_to_collect
-            total_paid = account.get_total_paid()
-            remaining_due = max(total_to_collect - total_paid, 0)
-
-    if remaining_due > 0:
-        status = 'DUE'
-        status_paragraph = (
-            "Your payment has been successfully updated. However, the shown "
-            "remaining amount is still pending for the selected billing month. "
-            "Please make the remaining payment at the earliest."
+    if remaining > 0:
+        status_message = (
+            f"An amount of ₹{remaining} remains outstanding for this billing period."
         )
     else:
-        status = 'PAID'
-        status_paragraph = (
-            "The payment for the selected billing month is complete and no "
-            "amount is currently pending."
+        status_message = (
+            "Your mess fee for this billing period has been paid in full. "
+            "No outstanding amount remains."
         )
 
     subject = f"Mess Payment Receipt | {billing_month}"
-    body = (
+    plain_body = (
         f"Dear {display_name},\n\n"
-        f"We are pleased to confirm that your mess payment has been successfully "
-        f"recorded in the Hostel Mess Management System.\n\n"
-        f"Please find your updated payment details below:\n\n"
-        f"PAYMENT SUMMARY\n\n"
-        f"Billing Month: {billing_month}\n"
-        f"Total Mess Fee: ₹{total_to_collect}\n"
+        f"Your payment has been successfully recorded. Please find your payment receipt below:\n\n"
+        f"PAYMENT DETAILS\n"
+        f"Student Name: {display_name}\n"
+        f"Hostel ID: {hostel_id}\n"
+        f"Room Number: {room_no}\n"
+        f"Billing Period: {billing_month}\n"
+        f"Payment Date: {payment_date}\n"
+        f"Payment Method: {method}\n"
+        f"Transaction ID: {txn_id}\n\n"
+        f"ACCOUNT SUMMARY\n"
+        f"Total Mess Fee: ₹{total_fee}\n"
+        f"This Payment: ₹{payment.amount}\n"
         f"Total Amount Paid: ₹{total_paid}\n"
-        f"Remaining Due: ₹{remaining_due if remaining_due > 0 else 0}\n"
-        f"Payment Status: {status}\n\n"
-        f"{status_paragraph}\n\n"
-        f"If you have any questions regarding your payment, fee details, or "
-        f"remaining balance, please feel free to contact the Mess Management "
-        f"Committee.\n\n"
-        f"Thank you for your cooperation.\n\n"
-        f"Warm Regards,\n"
-        f"Aman Jaiswal\n"
-        f"Mess Management Committee\n"
-        f"APJ Abdul Kalam Boys Hostel"
+        f"Remaining Due: ₹{remaining}\n"
+        f"Payment Status: {status_label}\n\n"
+        f"{status_message}\n\n"
+        f"Regards,\n"
+        f"Mess Committee\n"
+        f"APJ Abdul Kalam Boys Hostel\n"
+        f"https://hostelmess.in\n"
     )
+    html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+        <tr>
+            <td align="center" style="padding:20px 10px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:600px;">
+                    <tr>
+                        <td style="background-color:#1a5276; padding:30px 20px; text-align:center;">
+                            <h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:bold; line-height:1.3;">APJ Abdul Kalam Boys Hostel</h1>
+                            <p style="color:#d6eaf8; margin:8px 0 0 0; font-size:14px; font-weight:bold;">MESS COMMITTEE</p>
+                            <p style="color:#aed6f1; margin:4px 0 0 0; font-size:12px;">Hostel Mess Management System</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:30px 20px;">
+                            <p style="color:#333333; font-size:16px; margin:0 0 16px 0; line-height:1.5;">Dear {display_name},</p>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 24px 0;">
+                                Your payment has been successfully recorded. Please find your payment receipt below:
+                            </p>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                                <tr>
+                                    <td style="background-color:#eaf2f8; border-radius:6px; padding:0; overflow:hidden;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td colspan="2" style="background-color:#1a5276; padding:12px 20px; color:#ffffff; font-size:14px; font-weight:bold;">PAYMENT DETAILS</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px; width:40%;">Student Name</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{display_name}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Hostel ID</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{hostel_id}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Room Number</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{room_no}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Billing Period</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{billing_month}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Payment Date</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{payment_date}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Payment Method</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{method}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Transaction ID</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{txn_id}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                                <tr>
+                                    <td style="background-color:#fdfefe; border:1px solid #d5dbdb; border-radius:6px; padding:0; overflow:hidden;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td colspan="2" style="background-color:#1a5276; padding:12px 20px; color:#ffffff; font-size:14px; font-weight:bold;">ACCOUNT SUMMARY</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Total Mess Fee</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold; text-align:right;">₹{total_fee}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">This Payment</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold; text-align:right;">₹{payment.amount}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Total Amount Paid</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold; text-align:right;">₹{total_paid}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Remaining Due</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold; text-align:right;">₹{remaining}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Payment Status</td>
+                                                <td style="padding:10px 20px; font-size:14px; font-weight:bold; text-align:right; color:{'#27ae60' if remaining <= 0 else '#c0392b'};">{status_label}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 24px 0;">
+                                {status_message}
+                            </p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f4f4f4; padding:20px; text-align:center; border-top:1px solid #dddddd;">
+                            <p style="color:#555555; font-size:12px; margin:0 0 8px 0; line-height:1.5;">
+                                Regards,<br>
+                                Mess Committee<br>
+                                APJ Abdul Kalam Boys Hostel
+                            </p>
+                            <p style="color:#777777; font-size:12px; margin:0;">
+                                Authorized Representative / Mess Committee<br>
+                                <a href="https://hostelmess.in" style="color:#1a5276; text-decoration:none;">https://hostelmess.in</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
 
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
-    send_mail(subject, body, from_email, [email])
+    try:
+        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
+        email_kwargs = {
+            'subject': subject,
+            'message': plain_body,
+            'from_email': from_email,
+            'recipient_list': [email],
+            'connection': connection,
+        }
+        if html_body:
+            email_kwargs['html_message'] = html_body
+        sent = send_mail(
+            subject,
+            plain_body,
+            from_email,
+            [email],
+            connection=connection,
+            html_message=html_body,
+        )
+        if sent:
+            logger.info(
+                "Payment receipt email sent for payment %s to %s",
+                payment.id, email,
+            )
+        else:
+            logger.warning(
+                "Payment receipt email reported 0 sent for payment %s to %s",
+                payment.id, email,
+            )
+    except Exception as exc:
+        logger.error(
+            "Failed to send payment receipt email for payment %s to %s: %s",
+            payment.id, email, exc,
+        )
+
+
+def send_due_payment_email(account):
+    remaining = account.get_display_remaining()
+    if remaining <= 0:
+        logger.info(
+            "Due payment email skipped for account %s: remaining is %s",
+            account.id, remaining,
+        )
+        return
+
+    student = account.student
+    email = (student.email or '').strip()
+    if not email:
+        email = getattr(student.user, 'email', '').strip()
+    if not email:
+        logger.info(
+            "Due payment email skipped for account %s: student %s has no email",
+            account.id, student.id,
+        )
+        return
+
+    display_name = student.get_display_name()
+    billing_month = account.period.name if account.period_id else 'N/A'
+    total_fee = account.total_to_collect or 0
+    total_paid = account.get_total_paid() or 0
+    remaining_due = remaining or 0
+
+    room_no = student.room_no or 'N/A'
+    hostel_id = student.hostel_id or 'N/A'
+
+    subject = f"Mess Fee Due | {billing_month} | ₹{remaining_due} Pending"
+    plain_body = (
+        f"Dear {display_name},\n\n"
+        f"Your mess account currently has an outstanding amount for {billing_month}.\n\n"
+        f"PAYMENT SUMMARY\n"
+        f"Total Mess Fee: ₹{total_fee}\n"
+        f"Total Amount Paid: ₹{total_paid}\n"
+        f"Remaining Due: ₹{remaining_due}\n"
+        f"Payment Status: DUE\n\n"
+        f"PAYMENT REMINDER\n"
+        f"An amount of ₹{remaining_due} is still pending for {billing_month}. "
+        f"Please clear the pending amount at the earliest to avoid any inconvenience.\n\n"
+        f"Student details:\n"
+        f"Student Name: {display_name}\n"
+        f"Hostel ID: {hostel_id}\n"
+        f"Room Number: {room_no}\n"
+        f"Billing Period: {billing_month}\n\n"
+        f"Regards,\n"
+        f"Mess Committee\n"
+        f"APJ Abdul Kalam Boys Hostel\n"
+        f"Authorized Representative / Mess Committee\n"
+        f"https://hostelmess.in\n"
+    )
+    html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mess Fee Due</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4f4f4; font-family:Arial, Helvetica, sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f4;">
+        <tr>
+            <td align="center" style="padding:20px 10px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:600px;">
+                    <tr>
+                        <td style="background-color:#1a5276; padding:30px 20px; text-align:center;">
+                            <h1 style="color:#ffffff; margin:0; font-size:22px; font-weight:bold; line-height:1.3;">APJ Abdul Kalam Boys Hostel</h1>
+                            <p style="color:#d6eaf8; margin:8px 0 0 0; font-size:14px; font-weight:bold;">MESS COMMITTEE</p>
+                            <p style="color:#aed6f1; margin:4px 0 0 0; font-size:12px;">Hostel Mess Management System</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:30px 20px;">
+                            <p style="color:#333333; font-size:16px; margin:0 0 16px 0; line-height:1.5;">Dear {display_name},</p>
+                            <p style="color:#555555; font-size:14px; line-height:1.6; margin:0 0 24px 0;">
+                                Your mess account currently has an outstanding amount for <strong>{billing_month}</strong>.
+                            </p>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                                <tr>
+                                    <td style="background-color:#fdfefe; border:1px solid #d5dbdb; border-radius:6px; padding:0; overflow:hidden;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td colspan="2" style="background-color:#1a5276; padding:12px 20px; color:#ffffff; font-size:14px; font-weight:bold;">PAYMENT SUMMARY</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Total Mess Fee</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold; text-align:right;">₹{total_fee}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Total Amount Paid</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold; text-align:right;">₹{total_paid}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #e5e8e8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Remaining Due</td>
+                                                <td style="padding:10px 20px; color:#c0392b; font-size:14px; font-weight:bold; text-align:right;">₹{remaining_due}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Payment Status</td>
+                                                <td style="padding:10px 20px; color:#c0392b; font-size:14px; font-weight:bold; text-align:right;">DUE</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                                <tr>
+                                    <td style="background-color:#fdfefe; border:1px solid #d5dbdb; border-radius:6px; padding:0; overflow:hidden;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td colspan="2" style="background-color:#1a5276; padding:12px 20px; color:#ffffff; font-size:14px; font-weight:bold;">PAYMENT REMINDER</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:16px 20px; color:#c0392b; font-size:14px; line-height:1.6;">
+                                                    <strong>An amount of ₹{remaining_due} is still pending for {billing_month}.</strong><br>
+                                                    Please clear the pending amount at the earliest to avoid any inconvenience.
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
+                                <tr>
+                                    <td style="background-color:#eaf2f8; border-radius:6px; padding:0; overflow:hidden;">
+                                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                            <tr>
+                                                <td colspan="2" style="background-color:#1a5276; padding:12px 20px; color:#ffffff; font-size:14px; font-weight:bold;">Student Details</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px; width:40%;">Student Name</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{display_name}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Hostel ID</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{hostel_id}</td>
+                                            </tr>
+                                            <tr style="border-bottom:1px solid #d6eaf8;">
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Room Number</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{room_no}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:10px 20px; color:#555555; font-size:14px;">Billing Period</td>
+                                                <td style="padding:10px 20px; color:#333333; font-size:14px; font-weight:bold;">{billing_month}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f4f4f4; padding:20px; text-align:center; border-top:1px solid #dddddd;">
+                            <p style="color:#555555; font-size:12px; margin:0 0 8px 0; line-height:1.5;">
+                                Regards,<br>
+                                Mess Committee<br>
+                                APJ Abdul Kalam Boys Hostel
+                            </p>
+                            <p style="color:#777777; font-size:12px; margin:0;">
+                                Authorized Representative / Mess Committee<br>
+                                <a href="https://hostelmess.in" style="color:#1a5276; text-decoration:none;">https://hostelmess.in</a>
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>"""
+
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
+    try:
+        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
+        email_kwargs = {
+            'subject': subject,
+            'message': plain_body,
+            'from_email': from_email,
+            'recipient_list': [email],
+            'connection': connection,
+        }
+        if html_body:
+            email_kwargs['html_message'] = html_body
+        sent = send_mail(
+            subject,
+            plain_body,
+            from_email,
+            [email],
+            connection=connection,
+            html_message=html_body,
+        )
+        if sent:
+            logger.info(
+                "Due payment email sent for account %s to %s",
+                account.id, email,
+            )
+        else:
+            logger.warning(
+                "Due payment email reported 0 sent for account %s to %s",
+                account.id, email,
+            )
+    except Exception as exc:
+        logger.error(
+            "Failed to send due payment email for account %s to %s: %s",
+            account.id, email, exc,
+        )
 
 
 @frontend_management_restricted
@@ -766,15 +1319,19 @@ def payment_add(request):
         form = PaymentForm(request.POST)
         if form.is_valid():
             try:
-                payment = form.save()
-                try:
-                    send_payment_receipt_email(payment)
-                except Exception as exc:
-                    logger.error(
-                        "Failed to send payment receipt email to %s: %s",
-                        payment.student.email or getattr(payment.student.user, 'email', ''),
-                        exc,
+                payment = form.save(commit=False)
+                if payment.payment_mode == 'custom_full' and payment.period_id and payment.student_id:
+                    account, created = StudentPeriodAccount.objects.get_or_create(
+                        student=payment.student,
+                        period=payment.period,
                     )
+                    account.total_to_collect = payment.amount or 0
+                    account.is_manual_remaining = False
+                    account.manual_remaining = None
+                    account.save()
+                payment.status = 'PAID'
+                payment.save()
+                send_payment_receipt_email(payment)
                 messages.success(request, 'Payment recorded.')
                 return redirect('payments_list')
             except Exception as e:

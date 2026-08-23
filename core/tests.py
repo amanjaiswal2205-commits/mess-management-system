@@ -277,13 +277,13 @@ class EmailLoginTests(TestCase):
         self.assertNotIn('>Username</label>', content)
         self.assertNotIn('type="text"', content)
 
-    # C. Page must contain an Email field (type=email, label "Email Address")
+    # C. Page must contain a Gmail Address field (type=email, label "Gmail Address")
     def test_login_page_has_email_field(self):
         response = self.client.get(self.login_url)
         content = response.content.decode()
         self.assertIn('type="email"', content)
         self.assertIn('name="login"', content)
-        self.assertIn('Email Address', content)
+        self.assertIn('Gmail Address', content)
 
     # D. Correct email + password logs in successfully
     def test_correct_email_and_password_login_succeeds(self):
@@ -410,8 +410,8 @@ class ForgotPasswordTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertTrue('_auth_user_id' in self.client.session)
 
-    # Unknown email -> identical success response (no enumeration), no email sent.
-    def test_forgot_password_unknown_email_safe_response(self):
+    # Unknown email -> error response, no email sent.
+    def test_forgot_password_unknown_email_shows_error(self):
         captured, fn = self._capture_send_mail()
         with patch('core.views.send_mail', side_effect=fn):
             resp = self.client.post(
@@ -421,8 +421,8 @@ class ForgotPasswordTests(TestCase):
             )
         self.assertEqual(resp.status_code, 200)
         data = json.loads(resp.content)
-        self.assertTrue(data.get('success'))
-        self.assertTrue(data.get('otp_sent'))
+        self.assertFalse(data.get('success'))
+        self.assertIn('error', data)
         self.assertEqual(captured, {})  # send_mail never called
         self.assertIsNone(self.client.session.get('password_reset_email'))
 
