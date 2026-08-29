@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 import secrets
 from datetime import timedelta
 
+import requests
+
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import get_user_model, login
@@ -123,11 +125,51 @@ def google_login(request):
     return complete_social_login(request, adapter)
 
 
+def send_email_via_brevo(to_email, subject, html_content, text_content=None):
+    api_key = getattr(settings, 'BREVO_API_KEY', '')
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
+    timeout = getattr(settings, 'BREVO_API_TIMEOUT', 15)
+
+    if not api_key:
+        logger.error("BREVO_API_KEY is not configured")
+        return False
+
+    payload = {
+        'sender': {'email': from_email},
+        'to': [{'email': to_email}],
+        'subject': subject,
+        'htmlContent': html_content,
+    }
+    if text_content:
+        payload['textContent'] = text_content
+
+    headers = {
+        'accept': 'application/json',
+        'api-key': api_key,
+        'content-type': 'application/json',
+    }
+
+    try:
+        response = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers=headers,
+            json=payload,
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        return True
+    except Exception:
+        logger.exception("Failed to send email via Brevo API to %s", to_email)
+        return False
+
+
 def send_otp_email(email, otp, purpose, name=None):
-    """Send a 6-digit OTP to `email` using the configured central Gmail sender.
+    """Send a 6-digit OTP to `email` using the Brevo Transactional Email API.
 
     `purpose` is 'signup' or 'forgot_password' and controls the subject/body.
     `name` is the recipient's full name (used in signup emails).
+
+    Returns True on success, False on failure.
     """
     if purpose == 'signup':
         subject = 'Verify Your Email | Hostel Mess Management System'
@@ -304,25 +346,12 @@ def send_otp_email(email, otp, purpose, name=None):
 </body>
 </html>"""
 
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(
-        settings, 'EMAIL_HOST_USER', ''
+    return send_email_via_brevo(
+        to_email=email,
+        subject=subject,
+        html_content=html_body,
+        text_content=plain_body,
     )
-
-    try:
-        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 30))
-        email_kwargs = {
-            'subject': subject,
-            'message': plain_body,
-            'from_email': from_email,
-            'recipient_list': [email],
-            'connection': connection,
-        }
-        if html_body:
-            email_kwargs['html_message'] = html_body
-        send_mail(**email_kwargs)
-    except Exception:
-        logger.exception("Failed to send OTP email to %s", email)
-        raise
 
 
 def register(request):
@@ -472,7 +501,7 @@ def _forgot_password_send_otp(request, email):
         name = user.get_full_name() or user.username
     except UserModel.DoesNotExist:
         name = None
-    send_otp_email(email, otp, 'forgot_password', name=name)
+    return send_otp_email(email, otp, 'forgot_password', name=name)
 
 def forgot_password_request(request):
     if request.method == 'POST':
@@ -504,15 +533,12 @@ def forgot_password_request(request):
             messages.error(request, error_msg)
             return redirect('forgot_password_request')
 
-        try:
-            _forgot_password_send_otp(request, email)
-        except Exception as exc:
-            logger.error("Failed to send password-reset OTP to %s: %s", email, exc)
+        sent = _forgot_password_send_otp(request, email)
+        if not sent:
+            error_msg = 'Could not send the OTP email. Please try again later.'
             if is_ajax:
-                return JsonResponse(
-                    {'success': False, 'error': 'Could not send the OTP email. Please try again later.'}
-                )
-            messages.error(request, 'Could not send the OTP email. Please try again later.')
+                return JsonResponse({'success': False, 'error': error_msg})
+            messages.error(request, error_msg)
             return redirect('forgot_password_request')
         request.session['password_reset_email'] = email
         request.session.pop('password_reset_verified', None)
