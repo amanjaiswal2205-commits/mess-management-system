@@ -1159,16 +1159,11 @@ def send_payment_receipt_email(payment):
 </body>
 </html>"""
 
-    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
     try:
-        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 30))
-        sent = send_mail(
-            subject,
-            plain_body,
-            from_email,
-            [email],
-            connection=connection,
-            html_message=html_body,
+        sent = send_email_via_brevo(
+            recipient_email=email,
+            subject=subject,
+            html_content=html_body,
         )
         if sent:
             logger.info(
@@ -1177,14 +1172,16 @@ def send_payment_receipt_email(payment):
             )
         else:
             logger.warning(
-                "Payment receipt email reported 0 sent for payment %s to %s",
+                "Payment receipt email reported not sent for payment %s to %s",
                 payment.id, email,
             )
+        return sent
     except Exception:
         logger.exception(
             "Failed to send payment receipt email for payment %s to %s",
             payment.id, email,
         )
+        return False
 
 
 def send_due_payment_email(account):
