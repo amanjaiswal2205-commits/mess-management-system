@@ -1,9 +1,13 @@
 from django.contrib import admin
+import logging
 from .models import (
     AccountingPeriod, Student, Payment, Supplier, StockItem, Purchase,
     IssueToKitchen, Labour, LabourPayment, OtherExpense, MonthlySettlement,
     StudentPeriodAccount, MessSetting, PeriodDefaultFee, UserProfile
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(UserProfile)
@@ -105,15 +109,22 @@ class PaymentAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         from .views import send_payment_receipt_email
-        if not change and obj.status == 'PAID':
-            try:
-                send_payment_receipt_email(obj)
-            except Exception as exc:
-                import logging
-                logging.getLogger(__name__).error(
-                    "Failed to send payment receipt email for payment %s: %s",
-                    obj.id, exc,
-                )
+        if obj.status == 'PAID':
+            should_send = False
+            if not change:
+                should_send = True
+            else:
+                initial_status = form.initial.get('status')
+                if initial_status != 'PAID':
+                    should_send = True
+            if should_send:
+                try:
+                    send_payment_receipt_email(obj)
+                except Exception:
+                    logger.exception(
+                        "Failed to send payment receipt email for payment %s",
+                        obj.id,
+                    )
 
 
 @admin.register(Supplier)

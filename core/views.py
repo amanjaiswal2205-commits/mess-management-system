@@ -309,7 +309,7 @@ def send_otp_email(email, otp, purpose, name=None):
     )
 
     try:
-        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
+        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 30))
         email_kwargs = {
             'subject': subject,
             'message': plain_body,
@@ -320,8 +320,8 @@ def send_otp_email(email, otp, purpose, name=None):
         if html_body:
             email_kwargs['html_message'] = html_body
         send_mail(**email_kwargs)
-    except Exception as exc:
-        logger.error("Failed to send OTP email to %s: %s", email, exc)
+    except Exception:
+        logger.exception("Failed to send OTP email to %s", email)
         raise
 
 
@@ -1076,16 +1076,7 @@ def send_payment_receipt_email(payment):
 
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
     try:
-        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
-        email_kwargs = {
-            'subject': subject,
-            'message': plain_body,
-            'from_email': from_email,
-            'recipient_list': [email],
-            'connection': connection,
-        }
-        if html_body:
-            email_kwargs['html_message'] = html_body
+        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 30))
         sent = send_mail(
             subject,
             plain_body,
@@ -1104,10 +1095,10 @@ def send_payment_receipt_email(payment):
                 "Payment receipt email reported 0 sent for payment %s to %s",
                 payment.id, email,
             )
-    except Exception as exc:
-        logger.error(
-            "Failed to send payment receipt email for payment %s to %s: %s",
-            payment.id, email, exc,
+    except Exception:
+        logger.exception(
+            "Failed to send payment receipt email for payment %s to %s",
+            payment.id, email,
         )
 
 
@@ -1283,16 +1274,7 @@ def send_due_payment_email(account):
 
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '') or getattr(settings, 'EMAIL_HOST_USER', '')
     try:
-        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 10))
-        email_kwargs = {
-            'subject': subject,
-            'message': plain_body,
-            'from_email': from_email,
-            'recipient_list': [email],
-            'connection': connection,
-        }
-        if html_body:
-            email_kwargs['html_message'] = html_body
+        connection = get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 30))
         sent = send_mail(
             subject,
             plain_body,
@@ -1311,10 +1293,10 @@ def send_due_payment_email(account):
                 "Due payment email reported 0 sent for account %s to %s",
                 account.id, email,
             )
-    except Exception as exc:
-        logger.error(
-            "Failed to send due payment email for account %s to %s: %s",
-            account.id, email, exc,
+    except Exception:
+        logger.exception(
+            "Failed to send due payment email for account %s to %s",
+            account.id, email,
         )
 
 
@@ -1336,11 +1318,21 @@ def payment_add(request):
                     account.save()
                 payment.status = 'PAID'
                 payment.save()
-                send_payment_receipt_email(payment)
-                messages.success(request, 'Payment recorded.')
-                return redirect('payments_list')
             except Exception as e:
                 messages.error(request, f'Could not save payment: {e}')
+                return render(request, 'core/payment_form.html', {'form': form})
+
+            try:
+                send_payment_receipt_email(payment)
+            except Exception:
+                logger.exception(
+                    "Failed to send payment receipt email for payment %s",
+                    payment.id,
+                )
+                messages.warning(request, 'Payment recorded, but receipt email could not be sent.')
+
+            messages.success(request, 'Payment recorded.')
+            return redirect('payments_list')
     else:
         form = PaymentForm()
     return render(request, 'core/payment_form.html', {'form': form})

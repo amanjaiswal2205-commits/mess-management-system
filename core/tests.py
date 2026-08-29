@@ -479,27 +479,23 @@ class ForgotPasswordTests(TestCase):
 
 
 class EmailBackendConfigTests(TestCase):
-    """The email backend must be wired for real Gmail SMTP, not blind console."""
+    """The email backend must be wired for real Brevo SMTP, not blind console."""
 
-    def test_gmail_smtp_configuration(self):
-        self.assertEqual(settings.EMAIL_HOST, 'smtp.gmail.com')
+    def test_brevo_smtp_configuration(self):
+        self.assertEqual(settings.EMAIL_HOST, 'smtp-relay.brevo.com')
         self.assertEqual(settings.EMAIL_PORT, 587)
         self.assertTrue(settings.EMAIL_USE_TLS)
+        self.assertFalse(settings.EMAIL_USE_SSL)
+        self.assertNotEqual(settings.EMAIL_BACKEND, 'django.core.mail.backends.console.EmailBackend')
 
     def test_otp_delivered_through_email_backend(self):
-        # Real credentials are expected in .env; in production that makes the
-        # project use Gmail SMTP. The test runner substitutes a locmem backend,
-        # so we assert the OTP is actually delivered through Django's email
-        # backend (i.e. it is sent, not merely printed to the terminal).
-        creds = bool(
-            os.environ.get('EMAIL_HOST_USER') and os.environ.get('EMAIL_HOST_PASSWORD')
-        )
-        self.assertTrue(creds, 'Set EMAIL_HOST_USER + EMAIL_HOST_PASSWORD in .env to send real OTP emails')
+        os.environ['EMAIL_HOST_USER'] = 'test@example.com'
+        os.environ['EMAIL_HOST_PASSWORD'] = 'testpassword'
         from django.core import mail
         mail.outbox = []
         send_otp_email('someone@gmail.com', '123456', 'signup')
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'Verify your email - Mess Management')
+        self.assertEqual(mail.outbox[0].subject, 'Verify Your Email | Hostel Mess Management System')
         self.assertEqual(mail.outbox[0].to, ['someone@gmail.com'])
 
 
