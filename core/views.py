@@ -125,59 +125,53 @@ def google_login(request):
     return complete_social_login(request, adapter)
 
 
-def send_email_via_brevo(to_email, subject, html_content, text_content=None):
-    api_key = getattr(settings, 'BREVO_API_KEY', '').strip()
+def send_email_via_resend(to_email, subject, html_content, text_content=None):
+    api_key = getattr(settings, 'RESEND_API_KEY', '').strip()
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
-    timeout = getattr(settings, 'BREVO_API_TIMEOUT', 15)
-
-    logger.info(
-        "Brevo send: key_present=%s, key_length=%d, key_prefix=%s",
-        bool(api_key),
-        len(api_key),
-        (api_key[:4] if api_key else '') + '...',
-    )
+    timeout = getattr(settings, 'RESEND_API_TIMEOUT', 15)
 
     if not api_key:
-        logger.error("BREVO_API_KEY is not configured")
+        logger.error("RESEND_API_KEY is not configured")
         return False
 
+    sender = from_email if from_email else 'onboarding@resend.dev'
+
     payload = {
-        'sender': {'email': from_email},
-        'to': [{'email': to_email}],
+        'from': sender,
+        'to': [to_email],
         'subject': subject,
-        'htmlContent': html_content,
+        'html': html_content,
     }
     if text_content:
-        payload['textContent'] = text_content
+        payload['text'] = text_content
 
     headers = {
-        'accept': 'application/json',
-        'api-key': api_key,
-        'content-type': 'application/json',
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
     }
 
     try:
         response = requests.post(
-            'https://api.brevo.com/v3/smtp/email',
+            'https://api.resend.com/emails',
             headers=headers,
             json=payload,
             timeout=timeout,
         )
         if response.status_code != 200:
             logger.error(
-                "Brevo API returned %s: %s",
+                "Resend API returned %s: %s",
                 response.status_code,
                 response.text,
             )
         response.raise_for_status()
         return True
     except Exception:
-        logger.exception("Failed to send email via Brevo API to %s", to_email)
+        logger.exception("Failed to send email via Resend API to %s", to_email)
         return False
 
 
 def send_otp_email(email, otp, purpose, name=None):
-    """Send a 6-digit OTP to `email` using the Brevo Transactional Email API.
+    """Send a 6-digit OTP to `email` using the Resend Email API.
 
     `purpose` is 'signup' or 'forgot_password' and controls the subject/body.
     `name` is the recipient's full name (used in signup emails).
@@ -359,7 +353,7 @@ def send_otp_email(email, otp, purpose, name=None):
 </body>
 </html>"""
 
-    return send_email_via_brevo(
+    return send_email_via_resend(
         to_email=email,
         subject=subject,
         html_content=html_body,

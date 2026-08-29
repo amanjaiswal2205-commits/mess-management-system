@@ -227,3 +227,6 @@ EMAIL_TIMEOUT = 10
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 BREVO_API_TIMEOUT = 15
+
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+RESEND_API_TIMEOUT = 15
