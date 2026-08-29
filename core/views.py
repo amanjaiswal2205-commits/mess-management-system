@@ -170,6 +170,52 @@ def send_email_via_resend(to_email, subject, html_content, text_content=None):
         return False
 
 
+def send_email_via_brevo(recipient_email, subject, html_content):
+    api_key = getattr(settings, 'BREVO_API_KEY', '').strip()
+    if not api_key:
+        logger.error("BREVO_API_KEY is not configured")
+        return False
+
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json",
+    }
+
+    payload = {
+        "sender": {
+            "name": "Mess Management System",
+            "email": getattr(settings, 'DEFAULT_FROM_EMAIL', ''),
+        },
+        "to": [
+            {
+                "email": recipient_email
+            }
+        ],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
+
+    try:
+        response = requests.post(
+            'https://api.brevo.com/v3/smtp/email',
+            headers=headers,
+            json=payload,
+            timeout=getattr(settings, 'BREVO_API_TIMEOUT', 15),
+        )
+        if response.status_code not in (200, 201):
+            logger.error(
+                "Brevo API returned %s: %s",
+                response.status_code,
+                response.text,
+            )
+            return False
+        return True
+    except Exception:
+        logger.exception("Failed to send email via Brevo API to %s", recipient_email)
+        return False
+
+
 def send_otp_email(email, otp, purpose, name=None):
     """Send a 6-digit OTP to `email` using the Resend Email API.
 
@@ -353,6 +399,12 @@ def send_otp_email(email, otp, purpose, name=None):
 </body>
 </html>"""
 
+    if purpose == 'forgot_password':
+        return send_email_via_brevo(
+            recipient_email=email,
+            subject=subject,
+            html_content=html_body,
+        )
     return send_email_via_resend(
         to_email=email,
         subject=subject,
