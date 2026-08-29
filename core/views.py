@@ -126,9 +126,16 @@ def google_login(request):
 
 
 def send_email_via_brevo(to_email, subject, html_content, text_content=None):
-    api_key = getattr(settings, 'BREVO_API_KEY', '')
+    api_key = getattr(settings, 'BREVO_API_KEY', '').strip()
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', '')
     timeout = getattr(settings, 'BREVO_API_TIMEOUT', 15)
+
+    logger.info(
+        "Brevo send: key_present=%s, key_length=%d, key_prefix=%s",
+        bool(api_key),
+        len(api_key),
+        (api_key[:4] if api_key else '') + '...',
+    )
 
     if not api_key:
         logger.error("BREVO_API_KEY is not configured")
@@ -156,6 +163,12 @@ def send_email_via_brevo(to_email, subject, html_content, text_content=None):
             json=payload,
             timeout=timeout,
         )
+        if response.status_code != 200:
+            logger.error(
+                "Brevo API returned %s: %s",
+                response.status_code,
+                response.text,
+            )
         response.raise_for_status()
         return True
     except Exception:
