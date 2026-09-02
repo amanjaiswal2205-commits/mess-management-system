@@ -217,7 +217,7 @@ def send_email_via_brevo(recipient_email, subject, html_content):
 
 
 def send_otp_email(email, otp, purpose, name=None):
-    """Send a 6-digit OTP to `email` using the Resend Email API.
+    """Send a 6-digit OTP to `email` using the Brevo Email API.
 
     `purpose` is 'signup' or 'forgot_password' and controls the subject/body.
     `name` is the recipient's full name (used in signup emails).
@@ -399,17 +399,10 @@ def send_otp_email(email, otp, purpose, name=None):
 </body>
 </html>"""
 
-    if purpose == 'forgot_password':
-        return send_email_via_brevo(
-            recipient_email=email,
-            subject=subject,
-            html_content=html_body,
-        )
-    return send_email_via_resend(
-        to_email=email,
+    return send_email_via_brevo(
+        recipient_email=email,
         subject=subject,
         html_content=html_body,
-        text_content=plain_body,
     )
 
 
