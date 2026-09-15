@@ -5,16 +5,16 @@ from core.models import UserProfile
 
 
 class Command(BaseCommand):
-    help = 'Create a superuser from environment variables if ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are set.'
+    help = 'Create a superuser from environment variables if DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, and DJANGO_SUPERUSER_PASSWORD are set.'
 
     def handle(self, *args, **options):
-        username = os.environ.get('ADMIN_USERNAME')
-        email = os.environ.get('ADMIN_EMAIL')
-        password = os.environ.get('ADMIN_PASSWORD')
+        username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
+        email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
+        password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
 
         if not username or not email or not password:
             self.stdout.write(
-                self.style.WARNING('ADMIN variables missing. Skipped admin creation.')
+                self.style.WARNING('DJANGO_SUPERUSER variables missing. Skipped admin creation.')
             )
             return
 
