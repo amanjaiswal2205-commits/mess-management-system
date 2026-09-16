@@ -5,20 +5,37 @@ from core.models import UserProfile
 
 
 class Command(BaseCommand):
-    help = 'Create a superuser from environment variables if DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_EMAIL, and DJANGO_SUPERUSER_PASSWORD are set.'
+    help = 'Create a superuser from environment variables and optionally reset the configured superuser password.'
 
     def handle(self, *args, **options):
         username = os.environ.get('DJANGO_SUPERUSER_USERNAME')
         email = os.environ.get('DJANGO_SUPERUSER_EMAIL')
         password = os.environ.get('DJANGO_SUPERUSER_PASSWORD')
+        reset_password = os.environ.get('DJANGO_RESET_SUPERUSER_PASSWORD')
+
+        User = get_user_model()
+
+        if username and reset_password:
+            user = User.objects.filter(username=username, is_superuser=True).first()
+            if user is None:
+                self.stdout.write(
+                    self.style.WARNING(
+                        'DJANGO_RESET_SUPERUSER_PASSWORD is set, but no configured superuser was found. '
+                        'Password not reset.'
+                    )
+                )
+            else:
+                user.set_password(reset_password)
+                user.save()
+                self.stdout.write(
+                    self.style.SUCCESS('Configured superuser password reset successfully.')
+                )
 
         if not username or not email or not password:
             self.stdout.write(
                 self.style.WARNING('DJANGO_SUPERUSER variables missing. Skipped admin creation.')
             )
             return
-
-        User = get_user_model()
 
         user = User.objects.filter(username=username).first()
         if user is None:
