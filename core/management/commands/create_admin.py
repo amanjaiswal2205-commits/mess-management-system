@@ -16,19 +16,26 @@ class Command(BaseCommand):
         User = get_user_model()
 
         if username and reset_password:
-            user = User.objects.filter(username=username, is_superuser=True).first()
+            user = User.objects.filter(username=username).first()
             if user is None:
                 self.stdout.write(
                     self.style.WARNING(
-                        'DJANGO_RESET_SUPERUSER_PASSWORD is set, but no configured superuser was found. '
-                        'Password not reset.'
+                        'Configured superuser not found; password reset was not performed.'
                     )
                 )
-            else:
+            elif user.is_superuser and user.is_staff:
                 user.set_password(reset_password)
                 user.save()
                 self.stdout.write(
-                    self.style.SUCCESS('Configured superuser password reset successfully.')
+                    self.style.SUCCESS(
+                        'Admin password reset completed for configured superuser.'
+                    )
+                )
+            else:
+                self.stdout.write(
+                    self.style.WARNING(
+                        'Configured superuser is not a superuser/staff account; password reset was not performed.'
+                    )
                 )
 
         if not username or not email or not password:
