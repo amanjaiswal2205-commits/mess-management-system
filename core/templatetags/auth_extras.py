@@ -3,6 +3,7 @@ from django import template
 from allauth.socialaccount.templatetags.socialaccount import provider_login_url
 from allauth.socialaccount.models import SocialApp
 from django.contrib.auth.models import AnonymousUser
+from core.models import UserProfile
 
 register = template.Library()
 
@@ -27,6 +28,15 @@ def safe_provider_login_url(context, provider):
         return provider_login_url(context, provider)
     except SocialApp.DoesNotExist:
         return '#'
+
+
+@register.simple_tag(takes_context=True)
+def safe_profile(context):
+    """Return user's UserProfile or None if it does not exist."""
+    user = context.get('user')
+    if not user or not user.is_authenticated or isinstance(user, AnonymousUser):
+        return None
+    return UserProfile.objects.filter(user=user).first()
 
 
 @register.simple_tag(takes_context=True)

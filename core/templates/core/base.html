@@ -433,6 +433,7 @@
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         {% if user.is_authenticated %}
+        {% safe_profile as profile %}
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 flex-lg-nowrap">
           <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
           <li class="nav-item"><a class="nav-link" href="{% url 'student_list' %}">Students</a></li>
@@ -452,7 +453,7 @@
            <li class="nav-item"><a class="nav-link" href="{% url 'due_list' %}">Due List</a></li>
 
 
-          {% if user.profile.role == 'admin' or user.profile.can_view_reports %}
+          {% if profile and profile.role == 'admin' or profile and profile.can_view_reports %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Reports
@@ -465,8 +466,8 @@
           {% endif %}
 
           <li class="nav-item d-flex align-items-center" style="margin-left: auto;">
-            <span class="badge bg-{% if user.profile.role == 'admin' %}danger{% elif user.profile.role == 'staff' %}warning text-dark{% else %}secondary{% endif %} mx-2">
-              {{ user.profile.get_role_display|upper }}
+            <span class="badge bg-{% if profile and profile.role == 'admin' %}danger{% elif profile and profile.role == 'staff' %}warning text-dark{% else %}secondary{% endif %} mx-2">
+              {% if profile and profile.role == 'admin' %}ADMIN{% elif profile and profile.role == 'staff' %}STAFF{% else %}VIEWER{% endif %}
             </span>
           </li>
         </ul>
