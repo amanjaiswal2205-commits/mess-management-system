@@ -54,6 +54,7 @@ urlpatterns = [
     path('reports/purchases/', views.purchases_report, name='purchases_report'),
     path('reports/purchases/day-wise/', views.day_wise_purchase_report, name='day_wise_purchase_report'),
     path('reports/master/', views.master_report, name='master_report'),
+    path('reports/master/export/excel/', views.master_export_excel, name='master_export_excel'),
 
     # User Activity (Admin Only)
     path('users/activity/', views.user_activity, name='user_activity'),

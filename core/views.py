@@ -4,6 +4,7 @@ import django
 django.setup()
 
 import logging
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,9 @@ import secrets
 from datetime import timedelta
 
 import requests
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -1533,9 +1537,154 @@ def purchase_edit(request, pk):
 
 
 @login_required
-@staff_permission_required('can_export_purchase_excel')
+@staff_or_admin_required
 def purchases_export_excel(request):
-    return HttpResponse("export purchases", content_type='text/plain')
+    purchases = list(
+        Purchase.objects
+        .select_related('supplier', 'item', 'period')
+        .all()
+        .order_by('-bill_date', '-id')
+    )
+    generated_at = timezone.now()
+    report_date = timezone.localtime(generated_at).strftime('%Y-%m-%d')
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f'Mess_Purchase_Report_{report_date}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = 'Purchases'
+    worksheet.sheet_view.showGridLines = False
+
+    column_count = 11
+    worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=column_count)
+    title_cell = worksheet.cell(
+        row=1,
+        column=1,
+        value='HOSTEL MESS - PURCHASE REPORT',
+    )
+    title_cell.font = Font(name='Calibri', size=16, bold=True, color='FFFFFF')
+    title_cell.fill = PatternFill('solid', fgColor='198754')
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    worksheet.row_dimensions[1].height = 28
+
+    worksheet.cell(row=2, column=1, value='Report generated:')
+    worksheet.cell(row=2, column=1).font = Font(bold=True, color='404040')
+    generated_cell = worksheet.cell(
+        row=2,
+        column=2,
+        value=timezone.localtime(generated_at).replace(tzinfo=None),
+    )
+    generated_cell.number_format = 'dd mmm yyyy hh:mm:ss'
+    generated_cell.alignment = Alignment(horizontal='left')
+    worksheet.merge_cells(
+        start_row=2,
+        start_column=2,
+        end_row=2,
+        end_column=column_count,
+    )
+
+    headers = [
+        'Purchase ID',
+        'Supplier',
+        'Bill No',
+        'Bill Date',
+        'Accounting Period',
+        'Item',
+        'Quantity',
+        'Unit',
+        'Rate',
+        'Amount',
+        'Bill File',
+    ]
+    header_row = 4
+    header_fill = PatternFill('solid', fgColor='198754')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(
+        left=thin_gray,
+        right=thin_gray,
+        top=thin_gray,
+        bottom=thin_gray,
+    )
+
+    for column_number, header in enumerate(headers, start=1):
+        cell = worksheet.cell(row=header_row, column=column_number, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = cell_border
+    worksheet.row_dimensions[header_row].height = 30
+
+    total_amount = Decimal('0.00')
+    data_start_row = header_row + 1
+    for row_number, purchase in enumerate(purchases, start=data_start_row):
+        values = [
+            purchase.id,
+            purchase.supplier.name if purchase.supplier_id else '',
+            purchase.bill_no or '',
+            purchase.bill_date,
+            purchase.period.name if purchase.period_id else '',
+            purchase.item.name if purchase.item_id else '',
+            purchase.qty,
+            purchase.unit or '',
+            purchase.rate,
+            purchase.amount,
+            purchase.bill_file.name if purchase.bill_file.name else '',
+        ]
+        total_amount += purchase.amount or Decimal('0.00')
+
+        for column_number, value in enumerate(values, start=1):
+            cell = worksheet.cell(row=row_number, column=column_number, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if column_number in (1, 4, 7, 9, 10) else 'left',
+                vertical='center',
+                wrap_text=column_number in (2, 5, 6, 11),
+            )
+        worksheet.cell(row=row_number, column=4).number_format = 'dd-mmm-yyyy'
+        worksheet.cell(row=row_number, column=7).number_format = '#,##0.00'
+        worksheet.cell(row=row_number, column=9).number_format = '₹ #,##0.00'
+        worksheet.cell(row=row_number, column=10).number_format = '₹ #,##0.00'
+
+    data_end_row = data_start_row + len(purchases) - 1
+    filter_end_row = max(data_end_row, header_row)
+    worksheet.auto_filter.ref = f'A{header_row}:K{filter_end_row}'
+    worksheet.freeze_panes = 'A5'
+
+    total_row = data_start_row + len(purchases) + 1
+    total_label = worksheet.cell(row=total_row, column=1, value='Total Purchase Amount')
+    total_value = worksheet.cell(row=total_row, column=11, value=total_amount)
+    total_fill = PatternFill('solid', fgColor='E8F5E9')
+    for column_number in range(1, column_count + 1):
+        cell = worksheet.cell(row=total_row, column=column_number)
+        cell.fill = total_fill
+        cell.border = cell_border
+        cell.font = Font(bold=True, color='1B5E20')
+    total_label.alignment = Alignment(horizontal='right')
+    total_value.alignment = Alignment(horizontal='right')
+    total_value.number_format = '₹ #,##0.00'
+    worksheet.row_dimensions[total_row].height = 22
+
+    column_widths = [14, 22, 16, 15, 22, 22, 13, 12, 15, 16, 24]
+    for column_number, width in enumerate(column_widths, start=1):
+        worksheet.column_dimensions[get_column_letter(column_number)].width = width
+
+    worksheet.print_title_rows = '1:4'
+    worksheet.page_setup.orientation = 'landscape'
+    worksheet.page_setup.fitToWidth = 1
+    worksheet.page_setup.fitToHeight = 0
+    worksheet.sheet_properties.pageSetUpPr.fitToPage = True
+    worksheet.page_margins.left = 0.25
+    worksheet.page_margins.right = 0.25
+    worksheet.page_margins.top = 0.5
+    worksheet.page_margins.bottom = 0.5
+
+    workbook.save(response)
+    return response
 
 
 # Expenses
@@ -1711,6 +1860,675 @@ def day_wise_purchase_report(request):
 @staff_permission_required('can_view_reports')
 def master_report(request):
     return render(request, 'core/master_report.html', {})
+
+
+@login_required
+@staff_or_admin_required
+def master_export_excel(request):
+    generated_at = timezone.now()
+    report_date = timezone.localtime(generated_at).strftime('%Y-%m-%d')
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    filename = f'Hostel_Mess_Master_Report_{report_date}.xlsx'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    workbook = Workbook()
+
+    sheets = ['Summary', 'Payments', 'Purchases', 'Expenses', 'Due List', 'MonthlySettlement']
+    for i, sheet_name in enumerate(sheets):
+        if i == 0:
+            worksheet = workbook.active
+            worksheet.title = sheet_name
+        else:
+            worksheet = workbook.create_sheet(title=sheet_name)
+        worksheet.cell(row=1, column=1, value=sheet_name).font = Font(bold=True, size=14)
+
+    # Summary sheet with real data
+    ws = workbook['Summary']
+    ws.cell(row=1, column=1, value='HOSTEL MESS - MASTER REPORT').font = Font(name='Calibri', size=16, bold=True, color='FFFFFF')
+    ws.cell(row=1, column=1).fill = PatternFill('solid', fgColor='198754')
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=4)
+    ws.row_dimensions[1].height = 28
+
+    ws.cell(row=2, column=1, value='Report generated:').font = Font(bold=True, color='404040')
+    generated_cell = ws.cell(row=2, column=2, value=timezone.localtime(generated_at).replace(tzinfo=None))
+    generated_cell.number_format = 'dd mmm yyyy hh:mm:ss'
+    ws.merge_cells(start_row=2, start_column=2, end_row=2, end_column=4)
+
+    # Calculations
+    total_students = Student.objects.filter(is_active=True).count()
+    total_fee_collectable = StudentPeriodAccount.objects.aggregate(total=Sum('total_to_collect'))['total'] or Decimal('0.00')
+    total_fee_paid = Payment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_purchases = Purchase.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_labour = LabourPayment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_other_expense = OtherExpense.objects.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    total_expenses = total_purchases + total_labour + total_other_expense
+
+    total_due = Decimal('0.00')
+    for account in StudentPeriodAccount.objects.all():
+        remaining = account.get_display_remaining()
+        if remaining:
+            total_due += max(remaining, Decimal('0.00'))
+
+    surplus_deficit = total_fee_paid - total_expenses
+
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(left=thin_gray, right=thin_gray, top=thin_gray, bottom=thin_gray)
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill('solid', fgColor='198754')
+    label_font = Font(bold=True, color='404040')
+    value_font = Font(color='1F4E79')
+    currency_fmt = '₹ #,##0.00'
+    number_fmt = '#,##0'
+
+    row = 4
+    ws.cell(row=row, column=1, value='Metric').font = header_font
+    ws.cell(row=row, column=1).fill = header_fill
+    ws.cell(row=row, column=1).border = cell_border
+    ws.cell(row=row, column=1).alignment = Alignment(horizontal='center', vertical='center')
+    ws.cell(row=row, column=2, value='Value').font = header_font
+    ws.cell(row=row, column=2).fill = header_fill
+    ws.cell(row=row, column=2).border = cell_border
+    ws.cell(row=row, column=2).alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[row].height = 30
+
+    summary_data = [
+        ('Total Students', total_students, number_fmt, False),
+        ('Total Fee Collectable', total_fee_collectable, currency_fmt, True),
+        ('Total Fee Paid', total_fee_paid, currency_fmt, True),
+        ('Total Due', total_due, currency_fmt, True),
+        ('Total Purchases', total_purchases, currency_fmt, True),
+        ('Total Labour Expenses', total_labour, currency_fmt, True),
+        ('Total Other Expenses', total_other_expense, currency_fmt, True),
+        ('Total Expenses', total_expenses, currency_fmt, True),
+        ('Surplus / Deficit', surplus_deficit, currency_fmt, True),
+    ]
+
+    for label, value, fmt, is_currency in summary_data:
+        row += 1
+        label_cell = ws.cell(row=row, column=1, value=label)
+        label_cell.font = label_font
+        label_cell.border = cell_border
+        label_cell.alignment = Alignment(horizontal='left', vertical='center')
+        val_cell = ws.cell(row=row, column=2, value=value)
+        val_cell.font = value_font
+        val_cell.border = cell_border
+        val_cell.alignment = Alignment(horizontal='right', vertical='center')
+        val_cell.number_format = fmt
+
+    # Total row highlight
+    total_row = row
+    for col in range(1, 3):
+        cell = ws.cell(row=total_row, column=col)
+        cell.fill = PatternFill('solid', fgColor='E8F5E9')
+        cell.font = Font(bold=True, color='1B5E20')
+
+    ws.column_dimensions['A'].width = 30
+    ws.column_dimensions['B'].width = 22
+    ws.column_dimensions['C'].width = 10
+    ws.column_dimensions['D'].width = 10
+
+    ws.freeze_panes = 'A5'
+    ws.auto_filter.ref = f'A4:B{row}'
+
+    # Payments sheet
+    ws_pay = workbook['Payments']
+    payments = list(
+        Payment.objects
+        .select_related('student__user', 'period')
+        .all()
+        .order_by('-created_at', '-id')
+    )
+
+    pay_headers = [
+        'Payment ID',
+        'Student',
+        'Student Name',
+        'Hostel ID',
+        'Room No',
+        'Month',
+        'Period',
+        'Amount',
+        'Adjustment Amount',
+        'Method',
+        'Status',
+        'Transaction ID',
+        'Payment Mode',
+        'Created At',
+    ]
+    header_row = 1
+    header_fill = PatternFill('solid', fgColor='198754')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(left=thin_gray, right=thin_gray, top=thin_gray, bottom=thin_gray)
+
+    for col_num, header in enumerate(pay_headers, start=1):
+        cell = ws_pay.cell(row=header_row, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = cell_border
+    ws_pay.row_dimensions[header_row].height = 30
+
+    total_amount = Decimal('0.00')
+    total_adjustment = Decimal('0.00')
+    data_start_row = header_row + 1
+    for row_num, payment in enumerate(payments, start=data_start_row):
+        student_name = payment.student.student_name or payment.student.user.get_full_name() or payment.student.user.username
+        hostel_id = payment.student.hostel_id or ''
+        room_no = payment.student.room_no or ''
+        period_name = payment.period.name if payment.period_id else ''
+        values = [
+            payment.id,
+            f"{hostel_id} - {student_name}" if hostel_id else student_name,
+            student_name,
+            hostel_id,
+            room_no,
+            payment.month,
+            period_name,
+            payment.amount,
+            payment.adjustment_amount,
+            payment.get_method_display(),
+            payment.get_status_display(),
+            payment.txn_id or '',
+            payment.get_payment_mode_display(),
+            timezone.localtime(payment.created_at).replace(tzinfo=None) if payment.created_at else None,
+        ]
+        total_amount += payment.amount or Decimal('0.00')
+        total_adjustment += payment.adjustment_amount or Decimal('0.00')
+
+        for col_num, value in enumerate(values, start=1):
+            cell = ws_pay.cell(row=row_num, column=col_num, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if col_num in (1, 6, 8, 9) else 'left',
+                vertical='center',
+                wrap_text=col_num in (2, 3, 7, 11, 13),
+            )
+        ws_pay.cell(row=row_num, column=6).number_format = 'dd-mmm-yyyy'
+        ws_pay.cell(row=row_num, column=8).number_format = '₹ #,##0.00'
+        ws_pay.cell(row=row_num, column=9).number_format = '₹ #,##0.00'
+        ws_pay.cell(row=row_num, column=14).number_format = 'dd mmm yyyy hh:mm:ss'
+
+    data_end_row = data_start_row + len(payments) - 1
+    filter_end_row = max(data_end_row, header_row)
+    ws_pay.auto_filter.ref = f'A{header_row}:N{filter_end_row}'
+    ws_pay.freeze_panes = 'A2'
+
+    # Total row
+    total_row = data_start_row + len(payments) + 1
+    total_label = ws_pay.cell(row=total_row, column=1, value='Totals')
+    total_amt_cell = ws_pay.cell(row=total_row, column=8, value=total_amount)
+    total_adj_cell = ws_pay.cell(row=total_row, column=9, value=total_adjustment)
+    total_fill = PatternFill('solid', fgColor='E8F5E9')
+    for col_num in range(1, len(pay_headers) + 1):
+        cell = ws_pay.cell(row=total_row, column=col_num)
+        cell.fill = total_fill
+        cell.border = cell_border
+        cell.font = Font(bold=True, color='1B5E20')
+    total_label.alignment = Alignment(horizontal='right')
+    total_amt_cell.alignment = Alignment(horizontal='right')
+    total_adj_cell.alignment = Alignment(horizontal='right')
+    total_amt_cell.number_format = '₹ #,##0.00'
+    total_adj_cell.number_format = '₹ #,##0.00'
+    ws_pay.row_dimensions[total_row].height = 22
+
+    pay_col_widths = [14, 30, 25, 16, 12, 14, 20, 16, 18, 14, 14, 20, 20, 22]
+    for col_num, width in enumerate(pay_col_widths, start=1):
+        ws_pay.column_dimensions[get_column_letter(col_num)].width = width
+
+    ws_pay.print_title_rows = '1:1'
+    ws_pay.page_setup.orientation = 'landscape'
+    ws_pay.page_setup.fitToWidth = 1
+    ws_pay.page_setup.fitToHeight = 0
+    ws_pay.sheet_properties.pageSetUpPr.fitToPage = True
+    ws_pay.page_margins.left = 0.25
+    ws_pay.page_margins.right = 0.25
+    ws_pay.page_margins.top = 0.5
+    ws_pay.page_margins.bottom = 0.5
+
+    # Purchases sheet
+    ws_pur = workbook['Purchases']
+    purchases = list(
+        Purchase.objects
+        .select_related('supplier', 'item', 'period')
+        .all()
+        .order_by('-bill_date', '-id')
+    )
+
+    pur_headers = [
+        'Purchase ID',
+        'Supplier',
+        'Bill No',
+        'Bill Date',
+        'Period',
+        'Item',
+        'Quantity',
+        'Unit',
+        'Rate',
+        'Amount',
+        'Bill File',
+    ]
+    header_row = 1
+    header_fill = PatternFill('solid', fgColor='198754')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(left=thin_gray, right=thin_gray, top=thin_gray, bottom=thin_gray)
+
+    for col_num, header in enumerate(pur_headers, start=1):
+        cell = ws_pur.cell(row=header_row, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = cell_border
+    ws_pur.row_dimensions[header_row].height = 30
+
+    total_amount = Decimal('0.00')
+    data_start_row = header_row + 1
+    for row_num, purchase in enumerate(purchases, start=data_start_row):
+        values = [
+            purchase.id,
+            purchase.supplier.name if purchase.supplier_id else '',
+            purchase.bill_no or '',
+            purchase.bill_date,
+            purchase.period.name if purchase.period_id else '',
+            purchase.item.name if purchase.item_id else '',
+            purchase.qty,
+            purchase.unit or '',
+            purchase.rate,
+            purchase.amount,
+            purchase.bill_file.name if purchase.bill_file.name else '',
+        ]
+        total_amount += purchase.amount or Decimal('0.00')
+
+        for col_num, value in enumerate(values, start=1):
+            cell = ws_pur.cell(row=row_num, column=col_num, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if col_num in (1, 4, 7, 9, 10) else 'left',
+                vertical='center',
+                wrap_text=col_num in (2, 5, 6, 11),
+            )
+        ws_pur.cell(row=row_num, column=4).number_format = 'dd-mmm-yyyy'
+        ws_pur.cell(row=row_num, column=7).number_format = '#,##0.00'
+        ws_pur.cell(row=row_num, column=9).number_format = '₹ #,##0.00'
+        ws_pur.cell(row=row_num, column=10).number_format = '₹ #,##0.00'
+
+    data_end_row = data_start_row + len(purchases) - 1
+    filter_end_row = max(data_end_row, header_row)
+    ws_pur.auto_filter.ref = f'A{header_row}:K{filter_end_row}'
+    ws_pur.freeze_panes = 'A2'
+
+    # Total row
+    total_row = data_start_row + len(purchases) + 1
+    total_label = ws_pur.cell(row=total_row, column=1, value='Total Purchase Amount')
+    total_value = ws_pur.cell(row=total_row, column=11, value=total_amount)
+    total_fill = PatternFill('solid', fgColor='E8F5E9')
+    for col_num in range(1, len(pur_headers) + 1):
+        cell = ws_pur.cell(row=total_row, column=col_num)
+        cell.fill = total_fill
+        cell.border = cell_border
+        cell.font = Font(bold=True, color='1B5E20')
+    total_label.alignment = Alignment(horizontal='right')
+    total_value.alignment = Alignment(horizontal='right')
+    total_value.number_format = '₹ #,##0.00'
+    ws_pur.row_dimensions[total_row].height = 22
+
+    pur_col_widths = [14, 22, 16, 15, 22, 22, 13, 12, 15, 16, 24]
+    for col_num, width in enumerate(pur_col_widths, start=1):
+        ws_pur.column_dimensions[get_column_letter(col_num)].width = width
+
+    ws_pur.print_title_rows = '1:1'
+    ws_pur.page_setup.orientation = 'landscape'
+    ws_pur.page_setup.fitToWidth = 1
+    ws_pur.page_setup.fitToHeight = 0
+    ws_pur.sheet_properties.pageSetUpPr.fitToPage = True
+    ws_pur.page_margins.left = 0.25
+    ws_pur.page_margins.right = 0.25
+    ws_pur.page_margins.top = 0.5
+    ws_pur.page_margins.bottom = 0.5
+
+    # Expenses sheet
+    ws_exp = workbook['Expenses']
+
+    labour_payments = list(
+        LabourPayment.objects
+        .select_related('labour', 'period')
+        .filter(status='PAID')
+        .all()
+        .order_by('-month', '-id')
+    )
+
+    other_expenses = list(
+        OtherExpense.objects
+        .select_related('period')
+        .all()
+        .order_by('-month', '-id')
+    )
+
+    exp_headers = [
+        'Source / Type',
+        'Labour / Category',
+        'Month',
+        'Period',
+        'Amount',
+        'Status / Note',
+    ]
+    header_row = 1
+    header_fill = PatternFill('solid', fgColor='198754')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(left=thin_gray, right=thin_gray, top=thin_gray, bottom=thin_gray)
+
+    for col_num, header in enumerate(exp_headers, start=1):
+        cell = ws_exp.cell(row=header_row, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = cell_border
+    ws_exp.row_dimensions[header_row].height = 30
+
+    total_expenses = Decimal('0.00')
+    data_start_row = header_row + 1
+    row_num = data_start_row
+
+    # Labour Payments
+    for lp in labour_payments:
+        values = [
+            'Labour Payment',
+            lp.labour.name if lp.labour_id else '',
+            lp.month,
+            lp.period.name if lp.period_id else '',
+            lp.amount,
+            lp.get_status_display(),
+        ]
+        total_expenses += lp.amount or Decimal('0.00')
+
+        for col_num, value in enumerate(values, start=1):
+            cell = ws_exp.cell(row=row_num, column=col_num, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if col_num == 5 else 'left',
+                vertical='center',
+                wrap_text=col_num in (2, 6),
+            )
+        ws_exp.cell(row=row_num, column=3).number_format = 'mmm-yyyy'
+        ws_exp.cell(row=row_num, column=5).number_format = '₹ #,##0.00'
+        row_num += 1
+
+    # Other Expenses
+    for oe in other_expenses:
+        values = [
+            'Other Expense',
+            oe.category or '',
+            oe.month,
+            oe.period.name if oe.period_id else '',
+            oe.amount,
+            oe.note or '',
+        ]
+        total_expenses += oe.amount or Decimal('0.00')
+
+        for col_num, value in enumerate(values, start=1):
+            cell = ws_exp.cell(row=row_num, column=col_num, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if col_num == 5 else 'left',
+                vertical='center',
+                wrap_text=col_num in (2, 6),
+            )
+        ws_exp.cell(row=row_num, column=3).number_format = 'mmm-yyyy'
+        ws_exp.cell(row=row_num, column=5).number_format = '₹ #,##0.00'
+        row_num += 1
+
+    data_end_row = data_start_row + len(labour_payments) + len(other_expenses) - 1
+    filter_end_row = max(data_end_row, header_row)
+    ws_exp.auto_filter.ref = f'A{header_row}:F{filter_end_row}'
+    ws_exp.freeze_panes = 'A2'
+
+    # Total row
+    total_row = data_start_row + len(labour_payments) + len(other_expenses) + 1
+    total_label = ws_exp.cell(row=total_row, column=1, value='Total Expenses')
+    total_value = ws_exp.cell(row=total_row, column=5, value=total_expenses)
+    total_fill = PatternFill('solid', fgColor='E8F5E9')
+    for col_num in range(1, len(exp_headers) + 1):
+        cell = ws_exp.cell(row=total_row, column=col_num)
+        cell.fill = total_fill
+        cell.border = cell_border
+        cell.font = Font(bold=True, color='1B5E20')
+    total_label.alignment = Alignment(horizontal='right')
+    total_value.alignment = Alignment(horizontal='right')
+    total_value.number_format = '₹ #,##0.00'
+    ws_exp.row_dimensions[total_row].height = 22
+
+    exp_col_widths = [20, 30, 15, 22, 16, 40]
+    for col_num, width in enumerate(exp_col_widths, start=1):
+        ws_exp.column_dimensions[get_column_letter(col_num)].width = width
+
+    ws_exp.print_title_rows = '1:1'
+    ws_exp.page_setup.orientation = 'landscape'
+    ws_exp.page_setup.fitToWidth = 1
+    ws_exp.page_setup.fitToHeight = 0
+    ws_exp.sheet_properties.pageSetUpPr.fitToPage = True
+    ws_exp.page_margins.left = 0.25
+    ws_exp.page_margins.right = 0.25
+    ws_exp.page_margins.top = 0.5
+    ws_exp.page_margins.bottom = 0.5
+
+    # Due List sheet
+    ws_due = workbook['Due List']
+
+    accounts = list(
+        StudentPeriodAccount.objects
+        .select_related('student__user', 'period')
+        .all()
+        .order_by('period__start_date', 'student__hostel_id')
+    )
+
+    due_headers = [
+        'Student',
+        'Student Name',
+        'Hostel ID',
+        'Room No',
+        'Period',
+        'Total Fee',
+        'Total Paid',
+        'Due',
+        'Remaining Type',
+        'Status',
+    ]
+    header_row = 1
+    header_fill = PatternFill('solid', fgColor='198754')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(left=thin_gray, right=thin_gray, top=thin_gray, bottom=thin_gray)
+
+    for col_num, header in enumerate(due_headers, start=1):
+        cell = ws_due.cell(row=header_row, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = cell_border
+    ws_due.row_dimensions[header_row].height = 30
+
+    total_fee = Decimal('0.00')
+    total_paid = Decimal('0.00')
+    total_due = Decimal('0.00')
+    data_start_row = header_row + 1
+    row_num = data_start_row
+
+    for account in accounts:
+        total_paid_amount = account.get_total_paid() or Decimal('0.00')
+        remaining = account.get_display_remaining()
+        remaining = max(remaining or Decimal('0.00'), Decimal('0.00'))
+        collect = account.total_to_collect or Decimal('0.00')
+
+        student_name = account.student.student_name or account.student.user.get_full_name() or account.student.user.username
+        hostel_id = account.student.hostel_id or ''
+        room_no = account.student.room_no or ''
+        period_name = account.period.name if account.period_id else ''
+        remaining_type = account.get_remaining_type()
+
+        if remaining > 0:
+            status = 'Due'
+        else:
+            status = 'Paid'
+
+        values = [
+            f"{hostel_id} - {student_name}" if hostel_id else student_name,
+            student_name,
+            hostel_id,
+            room_no,
+            period_name,
+            collect,
+            total_paid_amount,
+            remaining,
+            remaining_type,
+            status,
+        ]
+        total_fee += collect
+        total_paid += total_paid_amount
+        total_due += remaining
+
+        for col_num, value in enumerate(values, start=1):
+            cell = ws_due.cell(row=row_num, column=col_num, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if col_num in (6, 7, 8) else 'left',
+                vertical='center',
+                wrap_text=col_num in (1, 2, 5, 9, 10),
+            )
+        ws_due.cell(row=row_num, column=6).number_format = '₹ #,##0.00'
+        ws_due.cell(row=row_num, column=7).number_format = '₹ #,##0.00'
+        ws_due.cell(row=row_num, column=8).number_format = '₹ #,##0.00'
+        row_num += 1
+
+    data_end_row = data_start_row + len(accounts) - 1
+    filter_end_row = max(data_end_row, header_row)
+    ws_due.auto_filter.ref = f'A{header_row}:J{filter_end_row}'
+    ws_due.freeze_panes = 'A2'
+
+    # Total row
+    total_row = data_start_row + len(accounts) + 1
+    total_label = ws_due.cell(row=total_row, column=1, value='Totals')
+    total_fee_cell = ws_due.cell(row=total_row, column=6, value=total_fee)
+    total_paid_cell = ws_due.cell(row=total_row, column=7, value=total_paid)
+    total_due_cell = ws_due.cell(row=total_row, column=8, value=total_due)
+    total_fill = PatternFill('solid', fgColor='E8F5E9')
+    for col_num in range(1, len(due_headers) + 1):
+        cell = ws_due.cell(row=total_row, column=col_num)
+        cell.fill = total_fill
+        cell.border = cell_border
+        cell.font = Font(bold=True, color='1B5E20')
+    total_label.alignment = Alignment(horizontal='right')
+    total_fee_cell.alignment = Alignment(horizontal='right')
+    total_paid_cell.alignment = Alignment(horizontal='right')
+    total_due_cell.alignment = Alignment(horizontal='right')
+    total_fee_cell.number_format = '₹ #,##0.00'
+    total_paid_cell.number_format = '₹ #,##0.00'
+    total_due_cell.number_format = '₹ #,##0.00'
+    ws_due.row_dimensions[total_row].height = 22
+
+    due_col_widths = [30, 25, 16, 12, 22, 16, 16, 16, 18, 14]
+    for col_num, width in enumerate(due_col_widths, start=1):
+        ws_due.column_dimensions[get_column_letter(col_num)].width = width
+
+    ws_due.print_title_rows = '1:1'
+    ws_due.page_setup.orientation = 'landscape'
+    ws_due.page_setup.fitToWidth = 1
+    ws_due.page_setup.fitToHeight = 0
+    ws_due.sheet_properties.pageSetUpPr.fitToPage = True
+    ws_due.page_margins.left = 0.25
+    ws_due.page_margins.right = 0.25
+    ws_due.page_margins.top = 0.5
+    ws_due.page_margins.bottom = 0.5
+
+    # MonthlySettlement sheet
+    ws_set = workbook['MonthlySettlement']
+
+    settlements = list(
+        MonthlySettlement.objects
+        .select_related('accounting_period')
+        .all()
+        .order_by('-month', '-id')
+    )
+
+    set_headers = [
+        'Settlement ID',
+        'Month',
+        'Accounting Period',
+        'Total Fee',
+        'Total Expense',
+        'Surplus / Deficit',
+        'Per Student Adjustment',
+        'Opening Balance',
+        'Closing Balance',
+        'Finalized',
+    ]
+    header_row = 1
+    header_fill = PatternFill('solid', fgColor='198754')
+    header_font = Font(bold=True, color='FFFFFF')
+    thin_gray = Side(style='thin', color='D9E2E3')
+    cell_border = Border(left=thin_gray, right=thin_gray, top=thin_gray, bottom=thin_gray)
+
+    for col_num, header in enumerate(set_headers, start=1):
+        cell = ws_set.cell(row=header_row, column=col_num, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+        cell.border = cell_border
+    ws_set.row_dimensions[header_row].height = 30
+
+    data_start_row = header_row + 1
+    for row_num, settlement in enumerate(settlements, start=data_start_row):
+        period_name = settlement.accounting_period.name if settlement.accounting_period_id else ''
+        values = [
+            settlement.id,
+            settlement.month,
+            period_name,
+            settlement.total_fee,
+            settlement.total_expense,
+            settlement.surplus_deficit,
+            settlement.per_student_adjustment,
+            settlement.opening_balance,
+            settlement.closing_balance,
+            'Yes' if settlement.finalized else 'No',
+        ]
+
+        for col_num, value in enumerate(values, start=1):
+            cell = ws_set.cell(row=row_num, column=col_num, value=value)
+            cell.border = cell_border
+            cell.alignment = Alignment(
+                horizontal='right' if col_num in (1, 4, 5, 6, 7, 8, 9) else 'left',
+                vertical='center',
+                wrap_text=col_num in (3, 10),
+            )
+        ws_set.cell(row=row_num, column=2).number_format = 'mmm-yyyy'
+        for col_num in (4, 5, 6, 7, 8, 9):
+            ws_set.cell(row=row_num, column=col_num).number_format = '₹ #,##0.00'
+
+    data_end_row = data_start_row + len(settlements) - 1
+    filter_end_row = max(data_end_row, header_row)
+    ws_set.auto_filter.ref = f'A{header_row}:J{filter_end_row}'
+    ws_set.freeze_panes = 'A2'
+
+    set_col_widths = [16, 15, 22, 16, 16, 18, 20, 18, 18, 14]
+    for col_num, width in enumerate(set_col_widths, start=1):
+        ws_set.column_dimensions[get_column_letter(col_num)].width = width
+
+    ws_set.print_title_rows = '1:1'
+    ws_set.page_setup.orientation = 'landscape'
+    ws_set.page_setup.fitToWidth = 1
+    ws_set.page_setup.fitToHeight = 0
+    ws_set.sheet_properties.pageSetUpPr.fitToPage = True
+    ws_set.page_margins.left = 0.25
+    ws_set.page_margins.right = 0.25
+    ws_set.page_margins.top = 0.5
+    ws_set.page_margins.bottom = 0.5
+
+    workbook.save(response)
+    return response
 
 
 # User Activity (Admin Only)

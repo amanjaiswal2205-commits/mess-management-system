@@ -12,6 +12,9 @@
         <div class="card-body">
           <p class="text-muted">This report provides an overview of all financial activities. Use the individual report pages for detailed views.</p>
           <div class="d-flex gap-2 flex-wrap">
+            {% if user.profile.role == 'admin' or user.profile.role == 'staff' %}
+            <a href="{% url 'master_export_excel' %}" class="btn btn-outline-dark">Export Master Excel</a>
+            {% endif %}
             <a href="{% url 'purchases_report' %}" class="btn btn-outline-primary">Purchase Report</a>
             <a href="{% url 'payment_summary' %}" class="btn btn-outline-success">Payment Summary</a>
             <a href="{% url 'due_list' %}" class="btn btn-outline-info">Due List</a>
