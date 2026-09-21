@@ -1771,6 +1771,19 @@ def due_list(request):
         selected_period = period_form.cleaned_data.get('period')
 
     if selected_period:
+        # Ensure all active students have StudentPeriodAccount for this period
+        default_fee_obj = getattr(selected_period, 'default_fee', None)
+        if default_fee_obj:
+            default_fee_amount = default_fee_obj.default_fee_per_student
+            active_students = Student.objects.filter(is_active=True)
+            with transaction.atomic():
+                for student in active_students:
+                    StudentPeriodAccount.objects.get_or_create(
+                        student=student,
+                        period=selected_period,
+                        defaults={'total_to_collect': default_fee_amount}
+                    )
+
         accounts = StudentPeriodAccount.objects.filter(period=selected_period).select_related('student__user')
         for account in accounts:
             total_paid = account.get_total_paid()
