@@ -24,6 +24,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail, get_connection
 from django.db.models import Sum, Q
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
@@ -1096,7 +1097,38 @@ def period_default_fee_set(request):
             form = PeriodDefaultFeeForm(request.POST, instance=obj)
             if form.is_valid():
                 form.save()
-                messages.success(request, 'Default fee saved.')
+                # Refresh default_fee after save to get updated value
+                default_fee = PeriodDefaultFee.objects.filter(period=selected_period).first()
+                # Auto-apply default fee to all active students
+                if default_fee:
+                    default_fee_amount = default_fee.default_fee_per_student
+                    active_students = Student.objects.filter(is_active=True)
+
+                    created_count = 0
+                    updated_count = 0
+                    with transaction.atomic():
+                        for student in active_students:
+                            account, created = StudentPeriodAccount.objects.get_or_create(
+                                student=student,
+                                period=selected_period,
+                                defaults={'total_to_collect': default_fee_amount}
+                            )
+                            if not created:
+                                account.total_to_collect = default_fee_amount
+                                account.is_manual_remaining = False
+                                account.manual_remaining = None
+                                account.save()
+                                updated_count += 1
+                            else:
+                                created_count += 1
+
+                    total_applied = created_count + updated_count
+                    if total_applied > 0:
+                        messages.success(request, f'₹{default_fee_amount} fee applied to {total_applied} active students ({created_count} new, {updated_count} updated).')
+                    else:
+                        messages.success(request, 'Default fee saved.')
+                else:
+                    messages.success(request, 'Default fee saved.')
                 return redirect(f"{reverse('period_default_fee_set')}?period={selected_period.pk}")
         else:
             form = PeriodDefaultFeeForm(instance=obj)
@@ -1138,7 +1170,7 @@ def period_default_fee_apply_unset(request, period_id):
                 created_count += 1
 
     messages.success(request, f'Default fee applied to {created_count} students without existing accounts.')
-    return redirect('period_default_fee_set', period_id=period.pk)
+    return redirect(f"{reverse('period_default_fee_set')}?period={period.pk}")
 
 
 @frontend_management_restricted
@@ -1171,7 +1203,7 @@ def period_default_fee_apply_all(request, period_id):
                 created_count += 1
 
     messages.success(request, f'Default fee applied: {created_count} new accounts created, {updated_count} existing accounts updated.')
-    return redirect('period_default_fee_set', period_id=period.pk)
+    return redirect(f"{reverse('period_default_fee_set')}?period={period.pk}")
 
 
 # Payments
