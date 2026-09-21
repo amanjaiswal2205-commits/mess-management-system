@@ -5,119 +5,832 @@
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+  /* Hero section - Premium Dynamic Slideshow */
   .hero-section {
-    animation: fadeHero 1s ease-out forwards;
-    opacity: 0;
-    transform: translateY(30px);
+    position: relative;
+    min-height: 370px;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 2rem;
   }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    transition: opacity 1s ease-in-out;
+    z-index: 0;
+  }
+
+  .hero-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(4, 35, 26, 0.88) 0%,
+      rgba(4, 35, 26, 0.68) 42%,
+      rgba(4, 35, 26, 0.35) 72%,
+      rgba(4, 35, 26, 0.20) 100%
+    );
+    z-index: 1;
+  }
+
+  .hero-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(0, 60, 20, 0.3) 0%, transparent 70%);
+    z-index: 2;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 10;
+    min-height: 370px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem 2.5rem;
+  }
+
+  .hero-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.7s ease, visibility 0.7s ease, transform 0.7s ease;
+    transform: translateY(20px);
+    pointer-events: none;
+    max-width: 100%;
+  }
+
+  .hero-slide.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .hero-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.95);
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .hero-slide.active .hero-label {
+    animation-delay: 0.1s;
+  }
+
+  .hero-heading {
+    font-size: clamp(2.2rem, 3.5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.05;
+    color: #fff;
+    margin-bottom: 1rem;
+    animation: fadeUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(15px);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+    white-space: normal;
+  }
+
+  .hero-slide.active .hero-heading {
+    animation-delay: 0.2s;
+  }
+
+  .hero-heading span {
+    color: #34d399;
+    background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: clamp(1rem, 2.2vw, 1.15rem);
+    color: rgba(255, 255, 255, 0.8);
+    max-width: 540px;
+    margin-bottom: 1.25rem;
+    line-height: 1.7;
+    animation: fadeUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  .hero-slide.active .hero-subtitle {
+    animation-delay: 0.3s;
+  }
+
+  .hero-features {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+    animation: fadeUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  .hero-slide.active .hero-features {
+    animation-delay: 0.4s;
+  }
+
+  .hero-feature-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: nowrap;
+  }
+
+  .hero-feature-item i {
+    font-size: 1rem;
+    color: #34d399;
+  }
+
+  .hero-feature-divider {
+    width: 1px;
+    height: 1.25rem;
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .hero-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    animation: fadeUp 0.6s ease-out forwards;
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  .hero-slide.active .hero-buttons {
+    animation-delay: 0.5s;
+  }
+
+  .hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.25s ease;
+    border: none;
+  }
+
+  .hero-btn-primary {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  }
+
+  .hero-btn-primary:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.45);
+    color: #fff;
+  }
+
+  .hero-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  .hero-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+    color: #fff;
+  }
+
+  /* Slider Controls - Hero Arrows */
+  .hero-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 20;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(10, 25, 12, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  }
+
+  .hero-section:hover .hero-arrow {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .hero-arrow:hover {
+    background: rgba(16, 185, 129, 0.35);
+    border-color: rgba(16, 185, 129, 0.5);
+    color: #34d399;
+    transform: translateY(-50%) scale(1.08);
+  }
+
+  .hero-arrow.prev {
+    left: 1rem;
+  }
+
+  .hero-arrow.next {
+    right: 1rem;
+  }
+
+  /* Mobile: show arrows with reduced opacity for touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    .hero-arrow {
+      opacity: 0.5;
+      pointer-events: auto;
+    }
+    .hero-arrow:hover {
+      opacity: 1;
+    }
+  }
+
+  .hero-indicators {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.6rem;
+    z-index: 20;
+  }
+
+  .hero-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .hero-indicator:hover {
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(1.15);
+  }
+
+  .hero-indicator.active {
+    background: #34d399;
+    box-shadow: 0 0 12px #34d399;
+    transform: scale(1.2);
+  }
+
+  /* Responsive */
+  @media (max-width: 991.98px) {
+    .hero-section {
+      min-height: auto;
+      border-radius: 14px;
+    }
+
+    .hero-content {
+      min-height: auto;
+      padding: 2rem 1.5rem;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .hero-left {
+      text-align: center;
+    }
+
+    .hero-label {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-heading {
+      text-align: center;
+    }
+
+    .hero-subtitle {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .hero-features {
+      justify-content: center;
+    }
+
+    .hero-buttons {
+      justify-content: center;
+    }
+
+    .hero-right {
+      width: 100%;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .live-overview-card {
+      min-height: auto;
+      padding: 1.5rem;
+    }
+
+    .hero-nav.prev { left: 1rem; }
+    .hero-nav.next { right: 1rem; }
+    .hero-nav { width: 44px; height: 44px; font-size: 1.1rem; }
+  }
+
+  @media (max-width: 768px) {
+    .hero-section {
+      position: relative !important;
+      height: auto !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      border-radius: 14px;
+    }
+
+    .hero-bg,
+    .hero-bg::before,
+    .hero-bg::after {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    .hero-bg {
+      background-size: cover !important;
+      background-position: center !important;
+    }
+
+    .hero-section::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(0, 35, 25, 0.38),
+        rgba(0, 25, 18, 0.72)
+      );
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative !important;
+      inset: auto !important;
+      top: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: auto !important;
+      transform: none !important;
+
+      width: 100% !important;
+      height: auto !important;
+      min-height: 0 !important;
+
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      align-items: center !important;
+
+      box-sizing: border-box !important;
+
+      padding: 70px 20px 100px !important;
+    }
+
+    .hero-left {
+      width: 100%;
+      text-align: center;
+      position: relative !important;
+      z-index: 2;
+      min-width: 0;
+    }
+
+    .hero-heading {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+
+      width: 100% !important;
+      max-width: 100% !important;
+
+      margin: 14px 0 16px !important;
+
+      font-size: clamp(2rem, 8vw, 2.55rem) !important;
+      line-height: 1.08 !important;
+
+      text-align: center !important;
+      overflow-wrap: break-word !important;
+    }
+
+    .hero-subtitle {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+
+      width: 100% !important;
+      max-width: 100% !important;
+
+      margin: 0 0 18px !important;
+
+      line-height: 1.5 !important;
+      text-align: center !important;
+    }
+
+    .hero-label {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+      margin: 0 auto 12px !important;
+    }
+
+    .hero-features {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+
+      width: 100% !important;
+
+      display: flex !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      align-items: center !important;
+
+      margin: 0 auto 22px !important;
+      gap: 8px 16px !important;
+    }
+
+    .hero-feature-divider {
+      display: none;
+    }
+
+    .hero-buttons {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+
+      width: 100% !important;
+
+      display: none !important;
+      flex-wrap: wrap !important;
+      justify-content: center !important;
+      align-items: center !important;
+
+      margin: 0 !important;
+      gap: 10px !important;
+
+      z-index: 5 !important;
+    }
+
+    .hero-btn {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+
+      min-height: 46px !important;
+      box-sizing: border-box !important;
+    }
+
+    .hero-label {
+      position: relative !important;
+      inset: auto !important;
+      transform: none !important;
+      margin: 0 auto 12px !important;
+    }
+
+    .hero-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 5;
+      width: 34px;
+      height: 34px;
+      font-size: 0.9rem;
+    }
+
+    .hero-arrow.prev { left: 0.5rem; }
+    .hero-arrow.next { right: 0.5rem; }
+
+    .hero-indicators {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 7;
+      margin-top: 0;
+    }
+
+    .hero-indicator {
+      width: 8px;
+      height: 8px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .hero-section {
+      min-height: 0 !important;
+      overflow: hidden !important;
+      border-radius: 12px;
+    }
+
+    .hero-content {
+      padding: 60px 14px 90px !important;
+    }
+
+    .hero-content h1 {
+      font-size: 1.9rem !important;
+      line-height: 1.08 !important;
+    }
+
+    .hero-content p {
+      font-size: 0.88rem !important;
+    }
+
+    .hero-buttons {
+      display: none !important;
+    }
+
+    .hero-arrow { width: 30px; height: 30px; font-size: 0.8rem; }
+  }
+
+  /* Keep existing animations */
   .metric {
     font-size: 2rem;
     font-weight: 700;
   }
+
+  .metric-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 0.75rem;
+  }
+
+  .fee-icon {
+    background: rgba(25, 135, 84, 0.15);
+    color: var(--mess-green);
+  }
+
+  .expense-icon {
+    background: rgba(220, 53, 69, 0.15);
+    color: #dc3545;
+  }
+
+  .surplus-icon {
+    background: rgba(25, 135, 84, 0.12);
+    color: var(--mess-green);
+  }
+
+  .surplus-icon-container {
+    background: rgba(25, 135, 84, 0.12);
+    color: #198754;
+  }
+
+  .surplus-icon-container.deficit {
+    background: rgba(220, 53, 69, 0.12);
+    color: #dc3545;
+  }
+
+  /* Chart wrapper */
+  .chart-wrapper {
+    position: relative;
+    height: 360px;
+    padding: 10px 10px 0;
+  }
+
+  @media (max-width: 768px) {
+    .chart-wrapper {
+      height: 300px;
+      padding: 5px;
+    }
+  }
+
+  .table-hover tbody tr:hover {
+    background-color: var(--mess-green-light);
+  }
+
   .fade-in-up {
     opacity: 0;
     transform: translateY(20px);
-    animation: fadeUp 0.8s forwards;
+    animation: fadeUp 0.6s ease-out forwards;
   }
+
   @keyframes fadeUp {
     to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes fadeHero {
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-hero {
-    animation: fadeUp 1s ease-out forwards;
-  }
-  .table-hover tbody tr {
-    transition: transform 0.2s ease, background 0.2s ease;
-  }
-  .table-hover tbody tr:hover {
-    transform: scale(1.01);
-    background: #f1fdf4;
-  }
-  .footer {
-    font-size: 0.9rem;
-    color: #6c757d;
-  }
-  .footer a:hover {
-    text-decoration: underline;
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<section class="hero-section text-white d-flex align-items-center justify-content-center text-center" style="min-height: 40vh; padding: 4rem 1rem; background: url('https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;">
-  <div class="bg-dark bg-opacity-50 p-4 rounded-3 animate-hero">
-    <h1 class="display-5 fw-bold mb-3">Welcome to Hostel Mess Dashboard</h1>
-    <p class="lead mb-4">Track payments, purchases, expenses & due management — all in one place.</p>
-    <a href="{% url 'due_list' %}" class="btn btn-light btn-lg shadow-sm">View Due List</a>
+<!-- Hero / Header - Premium Dynamic Slideshow -->
+<section class="hero-section" id="heroSection">
+  <!-- Background Images -->
+  <div class="hero-bg" id="heroBg1" style="background-image: url('https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=1920&q=80'); opacity: 1;"></div>
+  <div class="hero-bg" id="heroBg2" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1920&q=80'); opacity: 0;"></div>
+  <div class="hero-bg" id="heroBg3" style="background-image: url('https://images.unsplash.com/photo-1601050690597-df0568f70950?w=1920&q=80'); opacity: 0;"></div>
+
+  <!-- Navigation Arrows -->
+  <button class="hero-arrow prev" id="heroPrev" aria-label="Previous slide">
+    <i class="bi bi-chevron-left"></i>
+  </button>
+  <button class="hero-arrow next" id="heroNext" aria-label="Next slide">
+    <i class="bi bi-chevron-right"></i>
+  </button>
+
+  <!-- Hero Content -->
+  <div class="hero-content">
+      <!-- Left Content -->
+      <div class="hero-left" style="min-width: 0;">
+        <!-- Slide 1 -->
+        <div class="hero-slide active" data-slide="0">
+          <div class="hero-label"><i class="bi bi-house-door-fill"></i> MESS COMMITTEE</div>
+          <h1 class="hero-heading">Mess Management <span>Made Simple</span></h1>
+          <p class="hero-subtitle">Manage payments, expenses, purchases and dues from one place.</p>
+          <div class="hero-features">
+            <span class="hero-feature-item"><i class="bi bi-egg-fried"></i> Nutritious Food</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-people-fill"></i> Healthy Students</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-graph-up-arrow"></i> Better Tomorrow</span>
+          </div>
+          <div class="hero-buttons">
+            <a href="{% url 'due_list' %}" class="hero-btn hero-btn-primary"><i class="bi bi-eye"></i> View Due List</a>
+            <a href="{% url 'purchases_list' %}" class="hero-btn hero-btn-secondary"><i class="bi bi-cart-check"></i> Explore Purchases</a>
+          </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="hero-slide" data-slide="1">
+          <div class="hero-label"><i class="bi bi-cpu-fill"></i> SMART MESS MANAGEMENT</div>
+          <h1 class="hero-heading">Manage Your Mess <span>Smarter</span></h1>
+          <p class="hero-subtitle">Keep every payment, purchase and expense organized in one place.</p>
+          <div class="hero-features">
+            <span class="hero-feature-item"><i class="bi bi-currency-rupee"></i> Payments</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-cart-plus"></i> Purchases</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-receipt"></i> Expenses</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-calendar-check"></i> Due Tracking</span>
+          </div>
+          <div class="hero-buttons">
+            <a href="{% url 'due_list' %}" class="hero-btn hero-btn-primary"><i class="bi bi-eye"></i> View Due List</a>
+            <a href="{% url 'purchases_list' %}" class="hero-btn hero-btn-secondary"><i class="bi bi-cart-check"></i> Explore Purchases</a>
+          </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="hero-slide" data-slide="2">
+          <div class="hero-label"><i class="bi bi-building"></i> HOSTEL MESS SYSTEM</div>
+          <h1 class="hero-heading">Better Management <span>Better Living</span></h1>
+          <p class="hero-subtitle">A simple digital system for transparent and efficient mess operations.</p>
+          <div class="hero-features">
+            <span class="hero-feature-item"><i class="bi bi-search"></i> Track</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-sliders"></i> Manage</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-activity"></i> Monitor</span>
+            <span class="hero-feature-divider"></span>
+            <span class="hero-feature-item"><i class="bi bi-rocket-takeoff"></i> Improve</span>
+          </div>
+          <div class="hero-buttons">
+            <a href="{% url 'due_list' %}" class="hero-btn hero-btn-primary"><i class="bi bi-eye"></i> View Due List</a>
+            <a href="{% url 'purchases_list' %}" class="hero-btn hero-btn-secondary"><i class="bi bi-cart-check"></i> Explore Purchases</a>
+          </div>
+        </div>
+      </div>
+
+    <!-- Indicators -->
+    <div class="hero-indicators" id="heroIndicators">
+      <button class="hero-indicator active" data-slide="0" aria-label="Slide 1"></button>
+      <button class="hero-indicator" data-slide="1" aria-label="Slide 2"></button>
+      <button class="hero-indicator" data-slide="2" aria-label="Slide 3"></button>
+    </div>
   </div>
 </section>
 
-<main class="container my-5">
-  <div class="row g-4">
-    <div class="col-md-4 fade-in-up" style="animation-delay:0.1s">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-header bg-white border-0 py-3">
-          <h6 class="card-title text-muted mb-0">Total Fee Collected</h6>
+<!-- Financial Summary -->
+<div class="row g-4 mb-4">
+  <div class="col-md-4 fade-in-up" style="animation-delay:0.1s">
+    <div class="card h-100" style="background: #fff; border: 1px solid rgba(0,0,0,0.05); border-radius: 18px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); transition: all 0.25s ease; min-height: 210px;">
+      <div class="card-body p-4" style="padding: 28px 32px;">
+        <h6 class="text-uppercase small fw-semibold text-muted mb-2">TOTAL FEE COLLECTED</h6>
+        <div class="d-flex align-items-baseline gap-2 mb-3">
+          <div class="metric counter text-success" data-value="{{ total_fee }}" style="font-size: 2.25rem; font-weight: 700; line-height: 1.2;">₹ 0</div>
+          <i class="bi bi-arrow-up-right" style="font-size: 18px; color: #198754;"></i>
         </div>
-        <div class="card-body d-flex align-items-center justify-content-center">
-          <div class="metric counter text-success" data-value="{{ total_fee }}">₹ 0</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4 fade-in-up" style="animation-delay:0.3s">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-header bg-white border-0 py-3">
-          <h6 class="card-title text-muted mb-0">Total Expense</h6>
-        </div>
-        <div class="card-body d-flex align-items-center justify-content-center">
-          <div class="metric counter text-danger" data-value="{{ total_expense }}">₹ 0</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4 fade-in-up" style="animation-delay:0.5s">
-      <div class="card shadow-sm border-0 h-100">
-        <div class="card-header bg-white border-0 py-3">
-          <h6 class="card-title text-muted mb-0">Surplus / Deficit</h6>
-        </div>
-        <div class="card-body d-flex align-items-center justify-content-center">
-          <div id="surplusValue" class="metric counter" data-value="{{ surplus_deficit }}">₹ 0</div>
-        </div>
+        <small class="text-muted">From student payments</small>
       </div>
     </div>
   </div>
-</main>
-
-<div class="container mb-5 fade-in-up" style="animation-delay:0.7s">
-  <div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-0 py-3">
-      <h5 class="card-title mb-0">Monthly Fee vs Expense</h5>
+  <div class="col-md-4 fade-in-up" style="animation-delay:0.3s">
+    <div class="card h-100" style="background: #fff; border: 1px solid rgba(0,0,0,0.05); border-radius: 18px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); transition: all 0.25s ease; min-height: 210px;">
+      <div class="card-body p-4" style="padding: 28px 32px;">
+        <h6 class="text-uppercase small fw-semibold text-muted mb-2">TOTAL EXPENSE</h6>
+        <div class="d-flex align-items-baseline gap-2 mb-3">
+          <div class="metric counter text-danger" data-value="{{ total_expense }}" style="font-size: 2.25rem; font-weight: 700; line-height: 1.2;">₹ 0</div>
+          <i class="bi bi-arrow-up-right" style="font-size: 18px; color: #dc3545;"></i>
+        </div>
+        <small class="text-muted">Mess purchases & expenses</small>
+      </div>
     </div>
-    <div class="card-body">
-      <canvas id="feeExpenseChart" height="100"></canvas>
+  </div>
+  <div class="col-md-4 fade-in-up" style="animation-delay:0.5s">
+    <div class="card h-100" style="background: #fff; border: 1px solid rgba(0,0,0,0.05); border-radius: 18px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); transition: all 0.25s ease; min-height: 210px;">
+      <div class="card-body p-4" style="padding: 28px 32px;">
+        <h6 class="text-uppercase small fw-semibold text-muted mb-2">SURPLUS / DEFICIT</h6>
+        <div class="d-flex align-items-baseline gap-2 mb-3">
+          <div id="surplusValue" class="metric counter" data-value="{{ surplus_deficit }}" style="font-size: 2.25rem; font-weight: 700; line-height: 1.2;">₹ 0</div>
+          <i class="bi bi-arrow-up-right" id="surplusArrowIcon" style="font-size: 18px;"></i>
+        </div>
+        <small class="text-muted">Current financial status</small>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="container mb-5 fade-in-up" style="animation-delay:0.9s">
+<!-- Monthly Fee vs Expense Chart -->
+<div class="mb-4 fade-in-up" style="animation-delay:0.7s">
+  <div class="card" style="background: #fff; border: 1px solid rgba(0,0,0,0.05); border-radius: 18px; box-shadow: 0 8px 25px rgba(0,0,0,0.06);">
+    <div class="card-header bg-white border-0 py-3" style="border-radius: 18px 18px 0 0; border-bottom: 1px solid rgba(0,0,0,0.05);">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-bar-chart-line" style="font-size: 1.25rem; color: #198754;"></i>
+        <h5 class="card-title mb-0" style="font-weight: 700; color: #1f2937;">Monthly Fee vs Expense</h5>
+      </div>
+      <p class="text-muted small mb-0 mt-1">Historical comparison of collections and expenses</p>
+    </div>
+    <div class="card-body p-4" style="padding: 28px;">
+      <div class="chart-wrapper" style="position: relative; height: 360px;">
+        <canvas id="feeExpenseChart"></canvas>
+        <div id="chart-empty-state" class="empty-state" style="display: none; position: absolute; inset: 0; align-items: center; justify-content: center; color: #9ca3af; font-size: 1rem;">
+          No monthly data available yet.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Purchases -->
+<div class="mb-5 fade-in-up" style="animation-delay:0.9s">
   <div class="card shadow-sm border-0">
     <div class="card-header bg-white border-0 py-3">
       <div class="d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Recent Purchases</h5>
-        <a href="{% url 'purchases_list' %}" class="btn btn-sm btn-success shadow-sm">View All</a>
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-cart-check text-success"></i>
+          <h5 class="card-title mb-0">Recent Purchases</h5>
+        </div>
+        <a href="{% url 'purchases_list' %}" class="btn btn-sm btn-success shadow-sm">
+          <i class="bi bi-list-ul"></i> View All
+        </a>
       </div>
     </div>
-    <div class="card-body">
+    <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-sm table-hover align-middle">
+        <table class="table table-sm table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
               <th>Supplier</th>
               <th>Item</th>
               <th>Qty</th>
-              <th>Rate</th>
-              <th>Amount</th>
+              <th class="text-end">Rate</th>
+              <th class="text-end">Amount</th>
               <th>Date</th>
             </tr>
           </thead>
@@ -127,8 +840,8 @@
               <td><span class="badge bg-success-subtle text-success fw-semibold">{{ p.supplier.name }}</span></td>
               <td>{{ p.item.name }}</td>
               <td>{{ p.qty }}</td>
-              <td>₹ {{ p.rate }}</td>
-              <td>₹ {{ p.amount }}</td>
+              <td class="text-end">₹ {{ p.rate }}</td>
+              <td class="text-end">₹ {{ p.amount }}</td>
               <td>{{ p.bill_date }}</td>
             </tr>
             {% empty %}
@@ -146,6 +859,132 @@
 
 {% block extra_js %}
 <script>
+  // Hero Slider - Vanilla JS
+  (function() {
+    const slides = document.querySelectorAll('.hero-slide');
+    const backgrounds = [
+      document.getElementById('heroBg1'),
+      document.getElementById('heroBg2'),
+      document.getElementById('heroBg3')
+    ];
+    const indicators = document.querySelectorAll('.hero-indicator');
+    const prevBtn = document.getElementById('heroPrev');
+    const nextBtn = document.getElementById('heroNext');
+    const heroSection = document.getElementById('heroSection');
+    const totalSlides = slides.length;
+    let currentSlide = 0;
+    let autoSlideInterval;
+    let isPaused = false;
+
+    function showSlide(index) {
+      // Clamp index
+      if (index < 0) index = totalSlides - 1;
+      if (index >= totalSlides) index = 0;
+      currentSlide = index;
+
+      // Update slides
+      slides.forEach((slide, i) => {
+        slide.classList.toggle('active', i === index);
+      });
+
+      // Update backgrounds with cross-fade
+      backgrounds.forEach((bg, i) => {
+        bg.style.opacity = i === index ? '1' : '0';
+      });
+
+      // Update indicators
+      indicators.forEach((indicator, i) => {
+        indicator.classList.toggle('active', i === index);
+      });
+
+      // Update surplus icon color based on value
+      updateSurplusIcon();
+    }
+
+    function nextSlide() {
+      showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlide - 1);
+    }
+
+    function startAutoSlide() {
+      autoSlideInterval = setInterval(() => {
+        if (!isPaused) nextSlide();
+      }, 5500);
+    }
+
+    function stopAutoSlide() {
+      clearInterval(autoSlideInterval);
+    }
+
+    // Event listeners
+    prevBtn.addEventListener('click', () => {
+      prevSlide();
+      stopAutoSlide();
+      startAutoSlide();
+    });
+
+    nextBtn.addEventListener('click', () => {
+      nextSlide();
+      stopAutoSlide();
+      startAutoSlide();
+    });
+
+    indicators.forEach((indicator, i) => {
+      indicator.addEventListener('click', () => {
+        showSlide(i);
+        stopAutoSlide();
+        startAutoSlide();
+      });
+    });
+
+    // Pause on hover
+    heroSection.addEventListener('mouseenter', () => { isPaused = true; });
+    heroSection.addEventListener('mouseleave', () => { isPaused = false; });
+
+    // Initialize
+    showSlide(0);
+    startAutoSlide();
+  })();
+
+  // Surplus/Deficit icon color update
+  function updateSurplusIcon() {
+    const surplusEl = document.getElementById('surplusValue');
+    const surplusArrowIcon = document.getElementById('surplusArrowIcon');
+    const surplusIcon = document.getElementById('surplusIcon');
+    if (surplusEl) {
+      const val = parseFloat(surplusEl.getAttribute('data-value'));
+      if (!isNaN(val)) {
+        if (val >= 0) {
+          if (surplusArrowIcon) {
+            surplusArrowIcon.classList.remove('bi-arrow-down-right');
+            surplusArrowIcon.classList.add('bi-arrow-up-right');
+            surplusArrowIcon.style.color = '#198754';
+          }
+          if (surplusIcon) {
+            surplusIcon.classList.remove('deficit');
+            surplusIcon.style.background = 'rgba(16, 185, 129, 0.18)';
+            surplusIcon.style.color = '#34d399';
+          }
+        } else {
+          if (surplusArrowIcon) {
+            surplusArrowIcon.classList.remove('bi-arrow-up-right');
+            surplusArrowIcon.classList.add('bi-arrow-down-right');
+            surplusArrowIcon.style.color = '#dc3545';
+          }
+          if (surplusIcon) {
+            surplusIcon.classList.add('deficit');
+            surplusIcon.style.background = 'rgba(239, 68, 68, 0.18)';
+            surplusIcon.style.color = '#ef4444';
+          }
+        }
+      }
+    }
+  }
+
+  // Counter animation for financial cards (preserved)
   (function() {
     var el = document.getElementById('surplusValue');
     if (!el) return;
@@ -169,44 +1008,412 @@
     }, 16);
   });
 
-  const labels = {{ months|safe }};
-  const feeData = {{ fees|safe }};
-  const expenseData = {{ expenses|safe }};
+  // Initialize surplus icon color
+  updateSurplusIcon();
+</script>
 
-  const ctx = document.getElementById('feeExpenseChart').getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Total Fee',
-          data: feeData,
-          borderColor: 'green',
-          backgroundColor: 'rgba(25,135,84,0.2)',
-          tension: 0.3,
-          fill: true
-        },
-        {
-          label: 'Total Expense',
-          data: expenseData,
-          borderColor: 'red',
-          backgroundColor: 'rgba(220,53,69,0.2)',
-          tension: 0.3,
-          fill: true
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: 'top' },
-        tooltip: { mode: 'index', intersect: false }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
+<script id="chart-data" type="application/json">
+{
+  "labels": {{ months|safe }},
+  "fees": {{ fees|safe }},
+  "expenses": {{ expenses|safe }}
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded.');
+        return;
     }
-  });
+
+    const dataElement = document.getElementById('chart-data');
+    const canvas = document.getElementById('feeExpenseChart');
+    const emptyState = document.getElementById('chart-empty-state');
+
+    if (!dataElement || !canvas) {
+        console.error('Chart elements not found.');
+        return;
+    }
+
+    let chartData;
+
+    try {
+        chartData = JSON.parse(dataElement.textContent.trim());
+    } catch (error) {
+        console.error('Chart data parsing failed:', error);
+        if (emptyState) {
+            emptyState.style.display = 'flex';
+        }
+        return;
+    }
+
+    const labels = Array.isArray(chartData.labels)
+        ? chartData.labels
+        : [];
+
+    const feeData = Array.isArray(chartData.fees)
+        ? chartData.fees
+        : [];
+
+    const expenseData = Array.isArray(chartData.expenses)
+        ? chartData.expenses
+        : [];
+
+    if (!labels.length) {
+        canvas.style.display = 'none';
+
+        if (emptyState) {
+            emptyState.style.display = 'flex';
+        }
+
+        return;
+    }
+
+    const normalizedFeeData = labels.map(function (_, index) {
+        return Number(feeData[index] ?? 0);
+    });
+
+    const normalizedExpenseData = labels.map(function (_, index) {
+        return Number(expenseData[index] ?? 0);
+    });
+
+    canvas.style.display = 'block';
+
+    if (emptyState) {
+        emptyState.style.display = 'none';
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    const height = canvas.clientHeight || 360;
+
+    const feeGradient = ctx.createLinearGradient(
+        0, 0, 0, height
+    );
+
+    feeGradient.addColorStop(
+        0,
+        'rgba(25, 135, 84, 0.18)'
+    );
+
+    feeGradient.addColorStop(
+        1,
+        'rgba(25, 135, 84, 0.01)'
+    );
+
+    const expenseGradient = ctx.createLinearGradient(
+        0, 0, 0, height
+    );
+
+    expenseGradient.addColorStop(
+        0,
+        'rgba(220, 53, 69, 0.16)'
+    );
+
+    expenseGradient.addColorStop(
+        1,
+        'rgba(220, 53, 69, 0.01)'
+    );
+
+    const valueLabelPlugin = {
+        id: 'valueLabels',
+
+        afterDatasetsDraw: function(chart) {
+
+            const ctx = chart.ctx;
+
+            chart.data.datasets.forEach(function(dataset, datasetIndex) {
+
+                const meta = chart.getDatasetMeta(datasetIndex);
+
+                meta.data.forEach(function(point, index) {
+
+                    const value = dataset.data[index];
+
+                    if (value === undefined || value === null) {
+                        return;
+                    }
+
+                    const text =
+                        '₹ ' +
+                        Number(value).toLocaleString('en-IN');
+
+                    ctx.save();
+
+                    ctx.font = '600 11px Inter, Arial, sans-serif';
+
+                    const textWidth =
+                        ctx.measureText(text).width;
+
+                    const paddingX = 8;
+                    const paddingY = 5;
+
+                    const boxWidth =
+                        textWidth + paddingX * 2;
+
+                    const boxHeight = 22;
+
+                    let x = point.x - boxWidth / 2;
+
+                    let y = point.y - boxHeight - 10;
+
+                    if (y < 5) {
+                        y = point.y + 10;
+                    }
+
+                    const color =
+                        datasetIndex === 0
+                            ? '#198754'
+                            : '#dc3545';
+
+                    ctx.fillStyle = color;
+
+                    ctx.beginPath();
+
+                    ctx.roundRect(
+                        x,
+                        y,
+                        boxWidth,
+                        boxHeight,
+                        7
+                    );
+
+                    ctx.fill();
+
+                    ctx.fillStyle = '#ffffff';
+
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    ctx.fillText(
+                        text,
+                        point.x,
+                        y + boxHeight / 2
+                    );
+
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
+    new Chart(ctx, {
+
+        type: 'line',
+
+        data: {
+            labels: labels,
+
+            datasets: [
+
+                {
+                    label: 'Total Fee',
+
+                    data: normalizedFeeData,
+
+                    borderColor: '#198754',
+
+                    backgroundColor: feeGradient,
+
+                    borderWidth: 3,
+
+                    pointRadius: 5,
+
+                    pointHoverRadius: 8,
+
+                    pointBackgroundColor: '#198754',
+
+                    pointBorderColor: '#ffffff',
+
+                    pointBorderWidth: 3,
+
+                    tension: 0.42,
+
+                    fill: true
+                },
+
+                {
+                    label: 'Total Expense',
+
+                    data: normalizedExpenseData,
+
+                    borderColor: '#dc3545',
+
+                    backgroundColor: expenseGradient,
+
+                    borderWidth: 3,
+
+                    pointRadius: 5,
+
+                    pointHoverRadius: 8,
+
+                    pointBackgroundColor: '#dc3545',
+
+                    pointBorderColor: '#ffffff',
+
+                    pointBorderWidth: 3,
+
+                    tension: 0.42,
+
+                    fill: true
+                }
+            ]
+        },
+
+        plugins: [
+            valueLabelPlugin
+        ],
+
+        options: {
+
+            responsive: true,
+
+            maintainAspectRatio: false,
+
+            layout: {
+                padding: {
+                    top: 28,
+                    right: 10,
+                    bottom: 5,
+                    left: 5
+                }
+            },
+
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+
+            animation: {
+                duration: 900,
+                easing: 'easeOutQuart'
+            },
+
+            plugins: {
+
+                legend: {
+                    position: 'top',
+
+                    align: 'center',
+
+                    labels: {
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        padding: 22,
+
+                        color: '#374151',
+
+                        font: {
+                            family: 'Inter, Arial, sans-serif',
+                            size: 13,
+                            weight: '600'
+                        }
+                    }
+                },
+
+                tooltip: {
+
+                    enabled: true,
+
+                    backgroundColor: '#17202a',
+
+                    titleColor: '#ffffff',
+
+                    bodyColor: '#ffffff',
+
+                    borderColor: 'rgba(255,255,255,0.1)',
+
+                    borderWidth: 1,
+
+                    padding: 12,
+
+                    cornerRadius: 10,
+
+                    displayColors: true,
+
+                    callbacks: {
+
+                        label: function(context) {
+
+                            const value =
+                                context.parsed.y || 0;
+
+                            return (
+                                context.dataset.label +
+                                ': ₹ ' +
+                                Number(value)
+                                    .toLocaleString('en-IN')
+                            );
+                        }
+                    }
+                }
+            },
+
+            scales: {
+
+                y: {
+
+                    beginAtZero: true,
+
+                    border: {
+                        display: false
+                    },
+
+                    grid: {
+                        color: 'rgba(15, 23, 42, 0.06)',
+                        drawTicks: false
+                    },
+
+                    ticks: {
+
+                        padding: 8,
+
+                        color: '#94a3b8',
+
+                        font: {
+                            family: 'Inter, Arial, sans-serif',
+                            size: 11
+                        },
+
+                        callback: function(value) {
+
+                            return (
+                                '₹ ' +
+                                Number(value)
+                                    .toLocaleString('en-IN')
+                            );
+                        }
+                    }
+                },
+
+                x: {
+
+                    border: {
+                        display: false
+                    },
+
+                    grid: {
+                        display: false
+                    },
+
+                    ticks: {
+
+                        color: '#94a3b8',
+
+                        padding: 8,
+
+                        font: {
+                            family: 'Inter, Arial, sans-serif',
+                            size: 12,
+                            weight: '500'
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
 </script>
 {% endblock %}
