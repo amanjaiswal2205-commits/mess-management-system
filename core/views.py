@@ -1095,12 +1095,61 @@ def period_default_fee_set(request, period_id):
 
 @frontend_management_restricted
 def period_default_fee_apply_unset(request, period_id):
-    return redirect('dashboard')
+    period = get_object_or_404(AccountingPeriod, pk=period_id)
+    default_fee_obj = getattr(period, 'default_fee', None)
+    if not default_fee_obj:
+        messages.error(request, 'No default fee set for this period.')
+        return redirect('dashboard')
+
+    default_fee = default_fee_obj.default_fee_per_student
+    active_students = Student.objects.filter(is_active=True)
+
+    created_count = 0
+    with transaction.atomic():
+        for student in active_students:
+            account, created = StudentPeriodAccount.objects.get_or_create(
+                student=student,
+                period=period,
+                defaults={'total_to_collect': default_fee}
+            )
+            if created:
+                created_count += 1
+
+    messages.success(request, f'Default fee applied to {created_count} students without existing accounts.')
+    return redirect('period_default_fee_set', period_id=period.pk)
 
 
 @frontend_management_restricted
 def period_default_fee_apply_all(request, period_id):
-    return redirect('dashboard')
+    period = get_object_or_404(AccountingPeriod, pk=period_id)
+    default_fee_obj = getattr(period, 'default_fee', None)
+    if not default_fee_obj:
+        messages.error(request, 'No default fee set for this period.')
+        return redirect('dashboard')
+
+    default_fee = default_fee_obj.default_fee_per_student
+    active_students = Student.objects.filter(is_active=True)
+
+    updated_count = 0
+    created_count = 0
+    with transaction.atomic():
+        for student in active_students:
+            account, created = StudentPeriodAccount.objects.get_or_create(
+                student=student,
+                period=period,
+                defaults={'total_to_collect': default_fee}
+            )
+            if not created:
+                account.total_to_collect = default_fee
+                account.is_manual_remaining = False
+                account.manual_remaining = None
+                account.save()
+                updated_count += 1
+            else:
+                created_count += 1
+
+    messages.success(request, f'Default fee applied: {created_count} new accounts created, {updated_count} existing accounts updated.')
+    return redirect('period_default_fee_set', period_id=period.pk)
 
 
 # Payments
