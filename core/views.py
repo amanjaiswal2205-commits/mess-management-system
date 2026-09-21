@@ -1079,18 +1079,40 @@ def mess_setting(request):
 
 # Period Default Fee
 @frontend_management_restricted
-def period_default_fee_set(request, period_id):
-    period = get_object_or_404(AccountingPeriod, pk=period_id)
-    obj, created = PeriodDefaultFee.objects.get_or_create(period=period)
-    if request.method == 'POST':
-        form = PeriodDefaultFeeForm(request.POST, instance=obj)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Default fee saved.')
-            return redirect('dashboard')
-    else:
-        form = PeriodDefaultFeeForm(instance=obj)
-    return render(request, 'core/period_default_fee_form.html', {'form': form, 'period': period})
+def period_default_fee_set(request):
+    period_id = request.GET.get('period') or request.POST.get('period')
+    selected_period = None
+    form = None
+    default_fee = None
+    active_student_count = 0
+    expected_collection = 0
+
+    if period_id:
+        selected_period = get_object_or_404(AccountingPeriod, pk=period_id)
+        obj, created = PeriodDefaultFee.objects.get_or_create(period=selected_period)
+        default_fee = getattr(selected_period, 'default_fee', None)
+
+        if request.method == 'POST':
+            form = PeriodDefaultFeeForm(request.POST, instance=obj)
+            if form.is_valid():
+                form.save()
+                messages.success(request, 'Default fee saved.')
+                return redirect(f"{reverse('period_default_fee_set')}?period={selected_period.pk}")
+        else:
+            form = PeriodDefaultFeeForm(instance=obj)
+
+        if default_fee:
+            active_student_count = StudentPeriodAccount.objects.filter(period=selected_period).count()
+            expected_collection = active_student_count * default_fee.default_fee_per_student
+
+    context = {
+        'form': form,
+        'selected_period': selected_period,
+        'default_fee': default_fee,
+        'active_student_count': active_student_count,
+        'expected_collection': expected_collection,
+    }
+    return render(request, 'core/period_default_fee_form.html', context)
 
 
 @frontend_management_restricted
