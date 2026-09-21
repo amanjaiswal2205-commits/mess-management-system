@@ -810,6 +810,216 @@ def student_list(request):
     return render(request, 'core/student_list.html', ctx)
 
 
+@admin_required
+def student_import(request):
+    """
+    Import students from Excel file (.xlsx).
+    Admin only.
+    Expected Excel structure (MESS ST26.xlsx):
+    - Sheet: Sheet1
+    - Header row: Row 6
+    - Columns B:G = Sr.No, Student ID, Student Name, Room no, Mobile no, Email ID
+    - Data rows: Row 7 onwards (59 students)
+    """
+    from openpyxl import load_workbook
+    from django.db import transaction
+    from django.contrib.auth.models import User
+
+    if request.method == 'POST' and request.FILES.get('excel_file'):
+        excel_file = request.FILES['excel_file']
+
+        # Validate file type
+        if not excel_file.name.endswith('.xlsx'):
+            messages.error(request, 'Only .xlsx files are allowed.')
+            return redirect('student_import')
+
+        # Validate file size (max 5MB)
+        if excel_file.size > 5 * 1024 * 1024:
+            messages.error(request, 'File size must be less than 5MB.')
+            return redirect('student_import')
+
+        try:
+            wb = load_workbook(excel_file, read_only=True)
+            ws = wb['Sheet1'] if 'Sheet1' in wb.sheetnames else wb.active
+
+            # Find header row by looking for "Student ID" in rows 1-10
+            header_row = None
+            for row_idx in range(1, 11):
+                for cell in ws[row_idx]:
+                    if cell.value and str(cell.value).strip().lower() == 'student id':
+                        header_row = row_idx
+                        break
+                if header_row:
+                    break
+
+            if not header_row:
+                messages.error(request, 'Could not find "Student ID" header in first 10 rows.')
+                return redirect('student_import')
+
+            # Get headers from detected header row
+            headers = []
+            for cell in ws[header_row]:
+                if cell.value:
+                    headers.append(str(cell.value).strip())
+                else:
+                    headers.append('')
+
+            # Expected columns mapping by header name
+            expected_columns = {
+                'student id': 'student_id',
+                'student name': 'student_name',
+                'room no': 'room_no',
+                'mobile no': 'mobile_no',
+                'email id': 'email_id',
+            }
+
+            # Map header names to column indices
+            col_map = {}
+            for idx, header in enumerate(headers):
+                header_lower = header.lower().strip()
+                if header_lower in expected_columns:
+                    col_map[expected_columns[header_lower]] = idx
+
+            required_cols = ['student_id', 'student_name']
+            missing_cols = [col for col in required_cols if col not in col_map]
+            if missing_cols:
+                messages.error(
+                    request,
+                    f'Missing required columns: {", ".join(missing_cols)}. '
+                    f'Found headers: {", ".join([h for h in headers if h])}'
+                )
+                return redirect('student_import')
+
+            # Statistics
+            stats = {
+                'total_rows': 0,
+                'new_students': 0,
+                'updated_students': 0,
+                'skipped_rows': 0,
+                'errors': []
+            }
+
+            # Process rows starting from row after header
+            with transaction.atomic():
+                for row_idx, row in enumerate(ws.iter_rows(min_row=header_row + 1, values_only=True), start=header_row + 1):
+                    stats['total_rows'] += 1
+
+                    # Skip completely blank rows
+                    if not any(cell for cell in row if cell is not None and str(cell).strip()):
+                        stats['skipped_rows'] += 1
+                        continue
+
+                    # Use savepoint for each row to prevent one failure from breaking entire transaction
+                    sid = transaction.savepoint()
+                    try:
+                        # Get values by column index, handle out-of-bounds
+                        def get_cell(idx):
+                            if idx < len(row) and row[idx] is not None:
+                                val = str(row[idx]).strip()
+                                return val if val else ''
+                            return ''
+
+                        student_id = get_cell(col_map.get('student_id', -1))
+                        student_name = get_cell(col_map.get('student_name', -1))
+                        room_no = get_cell(col_map.get('room_no', -1))
+                        mobile_no = get_cell(col_map.get('mobile_no', -1))
+                        email_id = get_cell(col_map.get('email_id', -1))
+
+                        if not student_id or not student_name:
+                            stats['skipped_rows'] += 1
+                            stats['errors'].append(f'Row {row_idx}: Missing Student ID or Student Name')
+                            transaction.savepoint_rollback(sid)
+                            continue
+
+                        # Clean mobile - remove non-digits, handle numbers stored as int/float
+                        if mobile_no:
+                            mobile_no = ''.join(filter(str.isdigit, str(mobile_no)))
+                        # Clean email
+                        if email_id:
+                            email_id = email_id.strip()
+
+                        # Convert empty strings to None for nullable fields
+                        room_no = room_no if room_no else None
+                        mobile_no = mobile_no if mobile_no else None
+                        email_id = email_id if email_id else None
+
+                        # Check if student exists by hostel_id
+                        student = Student.objects.filter(hostel_id=student_id).first()
+
+                        if student:
+                            # Update existing student
+                            student.student_name = student_name
+                            if room_no:
+                                student.room_no = room_no
+
+                            # Preserve existing mobile/email if Excel cell is blank
+                            # Only update when Excel provides a non-empty value
+                            if mobile_no:
+                                student.phone = mobile_no
+                            if email_id:
+                                student.email = email_id
+
+                            student.save()
+
+                            # Update linked user
+                            user = student.user
+                            parts = student_name.strip().split(' ', 1)
+                            user.first_name = parts[0]
+                            user.last_name = parts[1] if len(parts) > 1 else ''
+                            if student.hostel_id:
+                                user.username = student.hostel_id
+                            user.save()
+
+                            stats['updated_students'] += 1
+                        else:
+                            # Create new student with user
+                            user = User.objects.create_user(
+                                username=student_id,
+                                email=email_id if email_id else '',
+                                first_name=student_name.split(' ', 1)[0],
+                                last_name=student_name.split(' ', 1)[1] if ' ' in student_name else '',
+                            )
+                            student = Student.objects.create(
+                                user=user,
+                                hostel_id=student_id,
+                                student_name=student_name,
+                                room_no=room_no,
+                                phone=mobile_no,
+                                email=email_id,
+                                is_active=True,
+                            )
+                            stats['new_students'] += 1
+
+                        transaction.savepoint_commit(sid)
+
+                    except Exception as e:
+                        transaction.savepoint_rollback(sid)
+                        stats['skipped_rows'] += 1
+                        stats['errors'].append(f'Row {row_idx}: {str(e)}')
+                        continue
+
+            # Prepare success message
+            msg = (
+                f'Import complete. '
+                f'Total rows: {stats["total_rows"]}, '
+                f'New students: {stats["new_students"]}, '
+                f'Updated: {stats["updated_students"]}, '
+                f'Skipped: {stats["skipped_rows"]}.'
+            )
+            if stats['errors']:
+                msg += ' Errors: ' + '; '.join(stats['errors'][:5])
+                if len(stats['errors']) > 5:
+                    msg += f' ... and {len(stats["errors"]) - 5} more errors.'
+            messages.success(request, msg)
+            return redirect('student_import')
+
+        except Exception as e:
+            messages.error(request, f'Failed to process Excel file: {str(e)}')
+            return redirect('student_import')
+
+    return render(request, 'core/student_import.html')
+
+
 @login_required
 @staff_permission_required('can_export_collection_excel')
 def students_export_excel(request):

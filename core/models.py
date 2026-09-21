@@ -92,7 +92,7 @@ class Student(models.Model):
     student_name = models.CharField(max_length=150, blank=True, default='', help_text="Proper display name with spaces (e.g. Aman Jaiswal). Used in payment receipt emails. Duplicate names allowed.")
     room_no = models.CharField(max_length=10, blank=True, null=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
-    email = models.EmailField(max_length=254, blank=True, help_text="Optional Gmail address for payment receipts")
+    email = models.EmailField(max_length=254, blank=True, null=True, help_text="Optional Gmail address for payment receipts")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -199,6 +199,7 @@ class StockItem(models.Model):
     name = models.CharField(max_length=100)
     unit = models.CharField(max_length=20)  # kg, L, pcs
     min_level = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    category = models.CharField(max_length=50, blank=True, default='', help_text="e.g. Sabzi, Grocery, Dal, Masala, Dry Fruit, Dairy, Oil, Kitchen, Cleaning, Other")
 
     def __str__(self):
         return self.name

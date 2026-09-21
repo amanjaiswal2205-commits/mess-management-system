@@ -9,6 +9,7 @@ urlpatterns = [
     # Students
     path('students/', views.student_list, name='student_list'),
     path('students/export/excel/', views.students_export_excel, name='students_export_excel'),
+    path('students/import/', views.student_import, name='student_import'),
     path('students/add/', views.student_add, name='student_add'),
     path('students/<int:pk>/edit/', views.student_edit, name='student_edit'),
     path('students/<int:pk>/toggle-active/', views.student_toggle_active, name='student_toggle_active'),

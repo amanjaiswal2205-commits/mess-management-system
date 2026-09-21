@@ -1,0 +1,77 @@
+{% extends 'core/base.html' %}
+{% block title %}Import Students | Mess Management{% endblock %}
+
+{% block content %}
+<main class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h4 class="mb-0">Import Students</h4>
+    <a href="{% url 'student_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i> Back to Students
+    </a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Upload Student Excel File</h5>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-4">
+          <label class="form-label fw-medium">Select Excel File (.xlsx)</label>
+          <input type="file" name="excel_file" accept=".xlsx" class="form-control" required>
+          <div class="form-text">
+            Maximum file size: 5MB. Only .xlsx format supported.
+          </div>
+        </div>
+
+        <div class="alert alert-info mb-4">
+          <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Expected Columns</h6>
+          <p class="mb-2">The Excel file should have the following columns in the first row (header row):</p>
+          <div class="row g-2 mb-2">
+            <div class="col-md-6"><code>Student ID</code> <span class="text-danger">*</span> <span class="text-muted">(Required, used as unique identifier)</span></div>
+            <div class="col-md-6"><code>Student Name</code> <span class="text-danger">*</span> <span class="text-muted">(Required)</span></div>
+            <div class="col-md-6"><code>Room no</code> <span class="text-muted">(Optional)</span></div>
+            <div class="col-md-6"><code>Mobile no</code> <span class="text-muted">(Optional)</span></div>
+            <div class="col-md-6"><code>Email ID</code> <span class="text-muted">(Optional)</span></div>
+          </div>
+          <hr class="my-2">
+          <ul class="mb-0 small">
+            <li>Header row must be the first row.</li>
+            <li>Blank rows will be ignored.</li>
+            <li>Missing Mobile/Email will remain blank (not filled with defaults).</li>
+            <li>Existing Student IDs will be updated; new IDs will create new students.</li>
+            <li>Maximum file size: 5MB.</li>
+          </ul>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-upload"></i> Import Students
+          </button>
+          <a href="{% url 'student_list' %}" class="btn btn-outline-secondary">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="card">
+    <div class="card-header bg-white border-0 py-3">
+      <h5 class="card-title mb-0">Import Result</h5>
+    </div>
+    <div class="card-body">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</main>
+{% endblock %}

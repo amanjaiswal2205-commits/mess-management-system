@@ -8,6 +8,9 @@
     <div class="d-flex gap-2 align-items-center flex-wrap">
       {% if user.profile.role == 'admin' %}
       <a href="{% url 'students_export_excel' %}" class="btn btn-outline-primary btn-sm">Export to Excel</a>
+      <a href="{% url 'student_import' %}" class="btn btn-success btn-sm">
+        <i class="bi bi-upload"></i> Import Students
+      </a>
       {% endif %}
       <span class="text-muted align-self-center">
         Total: {{ total_students }} | Named: {{ named_students }} | Unnamed: {{ unnamed_students }}
